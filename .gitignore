@@ -1,0 +1,19 @@
+# 忽略：素材原文（付费讲义拆分文本，不入公开仓库）
+_src/
+_src2/
+
+# 忽略：本地进度备份、服务端写入的 json（含个人答题记录）
+_data/
+
+# 忽略：云 SDK 的 npm 包体，只保留构建要用的 cloud_sdk.js
+_vendor/package/
+_vendor/sdk.tgz
+_vendor/meta.json
+_vendor/probe_*.html
+
+# 忽略：部署产物（docs/ 才是入库的那份）
+_site/
+
+# 忽略：Python 缓存
+__pycache__/
+*.pyc
