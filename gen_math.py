@@ -15,6 +15,8 @@ import sys
 from fractions import Fraction as F
 from pathlib import Path
 
+from gen_rcc import build_items as build_rcc
+
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "数量关系.json"
 
@@ -278,12 +280,12 @@ D = [
 def balance(items: list[dict]) -> None:
     """把正确项在 A/B/C/D 之间摊匀：只交换选项位置，不改内容。"""
     from collections import Counter
-    target = len(items) // 4
-    for _ in range(4000):
+    for _ in range(20000):
         cnt = Counter(it["ans"] for it in items)
-        hi = max(cnt, key=lambda k: cnt[k])
-        lo = min(cnt, key=lambda k: cnt[k])
-        if cnt[hi] - cnt[lo] <= 1:
+        counts = [cnt.get(k, 0) for k in range(4)]      # 某一位为 0 时 Counter 里没这个键
+        hi = max(range(4), key=lambda k: counts[k])
+        lo = min(range(4), key=lambda k: counts[k])
+        if counts[hi] - counts[lo] <= 1:
             break
         donor = next((it for it in items if it["ans"] == hi), None)
         if donor is None:
@@ -291,7 +293,7 @@ def balance(items: list[dict]) -> None:
         donor["opts"][hi], donor["opts"][lo] = donor["opts"][lo], donor["opts"][hi]
         donor["ans"] = lo
     final = Counter(it["ans"] for it in items)
-    print("答案分布:", {("ABCD"[k]): final[k] for k in range(4)}, "｜目标约", target)
+    print("答案分布:", {("ABCD"[k]): final.get(k, 0) for k in range(4)})
 
 
 def main() -> None:
@@ -311,12 +313,18 @@ def main() -> None:
         flat = opts[ans].replace(" ", "")
         assert any(c in flat for c in cands), f"{qid} 正确项文字里找不到 {expect}（选项：{opts[ans]}）"
         items.append({"id": qid, "tag": tag, "lv": lv, "t": stem,
-                      "opts": list(opts), "ans": ans, "exp": exp})
+                      "opts": list(opts), "ans": ans, "exp": exp, "cat": "工程问题"})
 
     balance(items)
-    doc = {"updated": "2026-11-17", "topic": "工程问题", "items": items}
+
+    # 集合容斥：独立生成器，自带校验与区域非负检查
+    rcc = build_rcc()
+    balance(rcc)
+    items.extend(rcc)
+
+    doc = {"updated": "2026-11-18", "topic": "工程问题 / 集合容斥", "items": items}
     OUT.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"OK  {len(items)} 道工程问题 -> {OUT}")
+    print(f"OK  {len(items)} 道（工程 {len(items) - len(rcc)} + 容斥 {len(rcc)}）-> {OUT}")
 
 
 if __name__ == "__main__":

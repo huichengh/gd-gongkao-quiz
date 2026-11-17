@@ -517,14 +517,15 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   <section id="v-math" style="display:none">
     <div id="mStart">
       <div class="mhero">
-        <div class="mt">工程问题 · 一组 10 道</div>
-        <div class="ms">从题库里随机抽 10 道，选完立刻判对错、看解析，交卷出成绩。<br>题库会优先出你没做过的题。</div>
+        <div class="mt">数量关系 · 一组 10 道</div>
+        <div class="ms">工程问题与集合容斥两个题型，可以挑一个专项练，也可以混合抽题。<br>选完立刻判对错、看解析，交卷出成绩；题库优先出你没做过的题。</div>
         <div class="mrow">
           <div><div class="k">题库</div><div class="v"><span id="mPool">0</span><small> 道</small></div></div>
           <div><div class="k">已做过</div><div class="v"><span id="mDoneN">0</span><small> 道</small></div></div>
           <div><div class="k">正确率</div><div class="v" id="mRate">—</div></div>
           <div><div class="k">收藏</div><div class="v"><span id="mFavN">0</span><small> 道</small></div></div>
         </div>
+        <div class="chips" id="mchips" style="margin-top:12px;padding-bottom:0"></div>
       </div>
       <div class="qnav">
         <button class="btn main" id="mStartBtn">开始一组（10 道）</button>
@@ -607,7 +608,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   </div>
 </div>
 
-<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系现收工程问题 46 道（每题答案由程序校验）</p>
+<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系现收工程问题 46 道、集合容斥 40 道（每题答案由程序校验）</p>
 
 <div class="mask" id="cloudMask">
   <div class="sheet">
@@ -1342,6 +1343,10 @@ const MSET_N = 10;
 let mset = null;              // {ids, pos, pick, t0, mode}
 let mView = 'start';          // start | run | done
 let mTimerId = 0;
+let mCat = 'all';             // 题型筛选：all / 工程问题 / 集合容斥
+
+const MCATS = Array.from(new Set(MATH.map(x => x.cat || '工程问题')));
+const mBase = () => (mCat === 'all' ? MATH : MATH.filter(x => (x.cat || '工程问题') === mCat));
 
 const mById = id => MATH.find(x => x.id === id);
 
@@ -1355,20 +1360,37 @@ function shuffle(a){
 }
 
 function pickIds(mode){
+  const base = mBase();
   if(mode === 'fav'){
-    return shuffle(MATH.filter(x => mfavs[x.id]).map(x => x.id)).slice(0, MSET_N);
+    return shuffle(base.filter(x => mfavs[x.id]).map(x => x.id)).slice(0, MSET_N);
   }
-  const fresh = MATH.filter(x => !mstat[x.id]).map(x => x.id);
-  const done = MATH.filter(x => mstat[x.id]).map(x => x.id);
+  const fresh = base.filter(x => !mstat[x.id]).map(x => x.id);
+  const done = base.filter(x => mstat[x.id]).map(x => x.id);
   let out = shuffle(fresh);
   if(out.length < MSET_N) out = out.concat(shuffle(done));
   return out.slice(0, MSET_N);
 }
 
+function buildMathChips(){
+  const box = $('#mchips');
+  if(!box) return;
+  box.innerHTML = '';
+  const rows = [['all', '全部 ' + MATH.length]]
+    .concat(MCATS.map(c => [c, c + ' ' + MATH.filter(x => (x.cat || '工程问题') === c).length]));
+  rows.forEach(([c, label]) => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (mCat === c ? ' on' : '');
+    b.textContent = label;
+    b.onclick = () => { mCat = c; renderMathHome(); };
+    box.appendChild(b);
+  });
+}
+
 function startSet(mode){
   const ids = pickIds(mode);
   if(!ids.length){
-    alert(mode === 'fav' ? '还没有收藏的题。先做一组，点题目右上角的 ☆ 收藏几道。' : '题库是空的。');
+    const scope = mCat === 'all' ? '' : '「' + mCat + '」里';
+    alert(mode === 'fav' ? scope + '还没有收藏的题。先做一组，点题目右上角的 ☆ 收藏几道。' : '题库是空的。');
     return;
   }
   mset = { ids, pos: 0, pick: {}, t0: Date.now(), mode };
@@ -1533,13 +1555,15 @@ function finishM(){
 }
 
 function renderMathHome(){
-  const pool = MATH.length;
-  const done = MATH.filter(x => mstat[x.id]).length;
+  buildMathChips();
+  const base = mBase();
+  const pool = base.length;
+  const done = base.filter(x => mstat[x.id]).length;
   let r = 0;
-  MATH.forEach(x => { if(mstat[x.id] === 'r') r++; });
+  base.forEach(x => { if(mstat[x.id] === 'r') r++; });
   if($('#mPool')) $('#mPool').textContent = pool;
   $('#mDoneN').textContent = done;
-  $('#mFavN').textContent = Object.keys(mfavs).length;
+  $('#mFavN').textContent = base.filter(x => mfavs[x.id]).length;
   $('#mRate').textContent = done ? Math.round(r / done * 100) + '%' : '—';
 
   const box = $('#mLast');
