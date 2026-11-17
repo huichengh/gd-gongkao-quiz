@@ -1511,11 +1511,18 @@ $('#mResetBtn').onclick = () => {
 
 
 /* ================= 云端同步（仅线上） ================= */
-const cloudState = { mode:'local', ready:false, session:null, err:'', busy:false };
+const cloudState = { mode:'local', ready:false, session:null, err:'', busy:false, remoteFilled:false };
 let cloud = null;
 let pushTimer = 0;
 
 const localMaxAt = () => Math.max(qAt || 0, vAt || 0, kAt || 0, mAt || 0);
+
+// 空态判断：换设备登录时最怕拿一张空表把云端冲掉，所以空的一律不算"更新"
+const isBlank = o => !o || Object.keys(o).length === 0;
+const localEmpty = () => isBlank(answers) && isBlank(favs) && isBlank(vfavs)
+  && isBlank(kfavs) && isBlank(mstat) && isBlank(mfavs);
+const payloadEmpty = p => !p || (isBlank(p.answers) && isBlank(p.favs) && isBlank(p.vfavs)
+  && isBlank(p.kfavs) && isBlank(p.mstat) && isBlank(p.mfavs));
 
 function cloudInit(){
   if(!CLOUD || IS_LOCAL || !window.WorkBuddyCloud){
@@ -1608,8 +1615,13 @@ async function cloudPull(){
       .from('study_state').select('payload').maybeSingle();
     if(error){ cloudState.err = error.message; setMode('local'); return; }
     const p = data && data.payload;
+    cloudState.remoteFilled = !!p && !payloadEmpty(p);
     if(!p){
       await cloudPush();                      // 首次登录：把本机记录推上去
+    } else if(localEmpty() && cloudState.remoteFilled){
+      applyPayload(p);                        // 新设备什么都没做：先认云端的，别拿空表覆盖
+      cloudState.err = '';
+      setMode('cloud');
     } else if((Number(p.updatedAt || 0) || 0) > localMaxAt()){
       applyPayload(p);                        // 云端更新：覆盖本机
       cloudState.err = '';
@@ -1630,6 +1642,8 @@ async function cloudPull(){
 
 async function cloudPush(){
   if(!cloud || !cloudState.session) return;
+  // 本机一片空白而云端有货：多半是新设备刚登录，别把云端冲掉
+  if(localEmpty() && cloudState.remoteFilled) return;
   const payload = { answers, favs, vfavs, kfavs, mstat, mfavs, updatedAt: Date.now() };
   const name = (cloudState.session.user && cloudState.session.user.name) || null;
   try{
