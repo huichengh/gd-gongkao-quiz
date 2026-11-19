@@ -26,17 +26,27 @@ python server.py           # 起服务，127.0.0.1:8760
 
 `server.py` 用 `ThreadingHTTPServer` 存进度到 `_data/*.json`（tmp + fsync + os.replace，留 60 份备份）。这是本机存储，不连云。
 
-## 改完重建
+## 改完发布（一条命令覆盖全部）
+
+```bash
+python publish_all.py "这次改了什么"
+```
+
+它会：重建 → 校验三份产物字节一致 → 提交并推 GitHub → 抓主站和 Pages 的线上文件比 md5，告诉你哪一处还是旧版。
+
+主站部署走 WorkBuddy 的部署工具，脚本调不到；若脚本提示「主站还是旧版」，用部署工具再发一次（`directory` 指到 `_site`）。
+
+只重建不发布可以单独跑：
 
 ```bash
 python build_platform.py
 ```
 
-产出三份，内容一致：
+产出三份，内容必须完全一致：
 
 - `省考平台.html` —— 本地直接双击可开
-- `_site/index.html` —— 线上托管用
-- `docs/index.html` —— GitHub Pages 用（Pages 只认根目录或 `/docs`）
+- `_site/index.html` —— WorkBuddy 主站（可登录云同步）
+- `docs/index.html` —— GitHub Pages 镜像（Pages 只认根目录或 `/docs`）
 
 页面是把题库 JSON 注入模板占位符生成的：`__QUIZ__` / `__VOCAB__` / `__KNOW__` / `__MATH__` / `__YANYU__` / `__CLOUD__` / `__CLOUD_SDK__`。云 SDK 内联进 HTML，不走 CDN（国内访问 jsdelivr 会失败）。
 
@@ -52,6 +62,8 @@ python build_platform.py
 | `gen_009.py` | 第 009 期（APEC 专题）的生成脚本，沿用可直接改期号 |
 | `rebalance.py` | 打散答案分布，让 A/B/C/D 不至于一边倒 |
 | `fix_headings.py` | 修复讲义自带编号被误当成新题目的问题 |
+| `publish_all.py` | 一键：重建 + 校验一致性 + 推 GitHub + 核对线上 |
+| `push_via_api.py` | 走 Git Data API 推 GitHub（本机 git push 不通） |
 | `server.py` | 本地服务 |
 | `cloud_config.json` | 云服务的 endpoint 与 publishable key |
 
