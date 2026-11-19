@@ -17,3 +17,9 @@ _site/
 # 忽略：Python 缓存
 __pycache__/
 *.pyc
+
+# 忽略：出题过程中的临时拆分文件
+_build/
+probe*.py
+dom_dump.html
+edge_err.txt

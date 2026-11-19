@@ -48,6 +48,7 @@ SPACES = {
     "vocab": DATA / "vocab.json",
     "know": DATA / "know.json",
     "math": DATA / "math.json",
+    "yanyu": DATA / "yanyu.json",
 }
 
 _lock = threading.Lock()
@@ -145,6 +146,7 @@ class Handler(SimpleHTTPRequestHandler):
             voc = read_snapshot(SPACES["vocab"])
             kno = read_snapshot(SPACES["know"])
             mth = read_snapshot(SPACES["math"])
+            yan = read_snapshot(SPACES["yanyu"])
             return self._json(200, {
                 "ok": True,
                 "answers": len(snap.get("answers", {})),
@@ -154,6 +156,8 @@ class Handler(SimpleHTTPRequestHandler):
                 "knowFavs": len(kno.get("favs", {})),
                 "mathDone": len(mth.get("answers", {})),
                 "mathFavs": len(mth.get("favs", {})),
+                "yanDone": len(yan.get("answers", {})),
+                "yanFavs": len(yan.get("favs", {})),
             })
         name = path[len("/api/"):] if path.startswith("/api/") else ""
         if name in SPACES:

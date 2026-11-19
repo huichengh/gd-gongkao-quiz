@@ -68,8 +68,17 @@ def load_know() -> list[dict]:
 
 
 def load_math() -> list[dict]:
-    """数量关系：数量关系.json → 题目列表（当前只有工程问题）。"""
+    """数量关系：数量关系.json → 题目列表（工程问题 + 集合容斥）。"""
     src = HERE / "数量关系.json"
+    if not src.exists():
+        return []
+    doc = json.loads(src.read_text(encoding="utf-8"))
+    return doc.get("items", [])
+
+
+def load_yanyu() -> list[dict]:
+    """言语理解：言语理解.json → 题目列表（选词填空 / 片段阅读 / 语句表达）。"""
+    src = HERE / "言语理解.json"
     if not src.exists():
         return []
     doc = json.loads(src.read_text(encoding="utf-8"))
@@ -302,6 +311,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
 
 /* ---------- 数量关系 ---------- */
 .tiles.four{grid-template-columns:repeat(4,1fr)}
+.tiles.five{grid-template-columns:repeat(5,1fr)}
 .mhero{background:linear-gradient(135deg,#1f2937,#4b5563);color:#fff;border-radius:18px;
   padding:20px 22px 18px;margin-bottom:14px}
 .mhero .mt{font-size:18px;font-weight:700;letter-spacing:.4px}
@@ -328,6 +338,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   .tiles{grid-template-columns:1fr 1fr}
   .tiles.three{grid-template-columns:1fr}
   .tiles.four{grid-template-columns:1fr 1fr}
+  .tiles.five{grid-template-columns:1fr 1fr}
   .grid{grid-template-columns:repeat(8,1fr)}
   .vcard .word{font-size:34px;letter-spacing:4px}
   .qtext{font-size:16px}
@@ -342,7 +353,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
       <div class="brand">广东省考学习平台<small id="sub">总览</small></div>
       <div class="hstat">
         <div><b id="doneN">0</b> / <span id="totalN">0</span> 已答　正确率 <b id="rate">—</b></div>
-        <div>★ 题 <b class="fav" id="favN">0</b>　词 <b class="fav" id="vfavN">0</b>　点 <b class="fav" id="kfavN">0</b>　数 <b class="fav" id="mfavN">0</b></div>
+        <div>★ 题 <b class="fav" id="favN">0</b>　词 <b class="fav" id="vfavN">0</b>　点 <b class="fav" id="kfavN">0</b>　数 <b class="fav" id="mfavN">0</b>　言 <b class="fav" id="yfavN">0</b></div>
         <span class="sync" id="sync">连接中…</span>
         <span class="acct" id="acctBtn" style="display:none">登录同步</span>
       </div>
@@ -353,26 +364,26 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
       <button data-go="vocab">成语速记</button>
       <button data-go="know">知识点</button>
       <button data-go="math">数量关系</button>
+      <button data-go="yanyu">言语理解</button>
     </nav>
-  </div>
-</header>
 
 <main>
   <!-- 首页 -->
   <section id="v-home">
     <div class="hero">
-      <h1>今天该做的四件事</h1>
-      <p id="heroSub">刷题保持手感，成语补言语理解的底子，知识点背死该背的，数量关系每天一组</p>
+      <h1>今天该做的五件事</h1>
+      <p id="heroSub">刷题保持手感，言语理解每天一组，成语补底子，知识点背死该背的，数量关系练速度</p>
       <div class="row">
         <div><div class="k">刷题进度</div><div class="v" id="hDone">0<small> / 0</small></div></div>
         <div><div class="k">正确率</div><div class="v" id="hRate">—</div></div>
         <div><div class="k">收藏</div><div class="v" id="hFav">0<small> 题</small></div></div>
         <div><div class="k">成语收藏</div><div class="v" id="hVocab">0<small> 条</small></div></div>
         <div><div class="k">知识点收藏</div><div class="v" id="hKnow">0<small> 条</small></div></div>
+        <div><div class="k">言语收藏</div><div class="v" id="hYan">0<small> 道</small></div></div>
       </div>
     </div>
 
-    <div class="tiles four">
+    <div class="tiles five">
       <div class="tile" data-go="quiz">
         <div class="t">每日刷题</div>
         <div class="n" id="tQuizDone">0<small> 题已答</small></div>
@@ -395,7 +406,13 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
         <div class="t">数量关系</div>
         <div class="n" id="tMathDone">0<small> 道已做</small></div>
         <div class="bar"><i id="tMathBar" style="width:0%"></i></div>
-        <div class="go">练工程题 →</div>
+        <div class="go">练一组 →</div>
+      </div>
+      <div class="tile" data-go="yanyu">
+        <div class="t">言语理解</div>
+        <div class="n" id="tYanDone">0<small> 道已做</small></div>
+        <div class="bar"><i id="tYanBar" style="width:0%"></i></div>
+        <div class="go">刷一组 →</div>
       </div>
     </div>
 
@@ -585,6 +602,79 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
       </div>
     </div>
   </section>
+
+  <!-- 言语理解 -->
+  <section id="v-yanyu" style="display:none">
+    <div id="yStart">
+      <div class="mhero">
+        <div class="mt">言语理解 · 一组 10 道</div>
+        <div class="ms">选词填空、片段阅读、语句表达三类，可以挑一类专项练，也可以混合抽题。<br>选完立刻判对错、看解析，交卷出成绩；题库优先出你没做过的题。</div>
+        <div class="mrow">
+          <div><div class="k">题库</div><div class="v"><span id="yPool">0</span><small> 道</small></div></div>
+          <div><div class="k">已做过</div><div class="v"><span id="yDoneN">0</span><small> 道</small></div></div>
+          <div><div class="k">正确率</div><div class="v" id="yRate">—</div></div>
+          <div><div class="k">收藏</div><div class="v"><span id="yFavN">0</span><small> 道</small></div></div>
+        </div>
+        <div class="chips" id="ychips" style="margin-top:12px;padding-bottom:0"></div>
+      </div>
+      <div class="qnav">
+        <button class="btn main" id="yStartBtn">开始一组（10 道）</button>
+      </div>
+      <div class="qnav">
+        <button class="btn" id="yFavBtn">只练收藏的题</button>
+        <button class="btn" id="yResetBtn">清空本模块记录</button>
+      </div>
+      <div class="sec-title">上一次的成绩</div>
+      <div class="list" id="yLast"></div>
+    </div>
+
+    <div id="yRun" style="display:none">
+      <div class="mbar">
+        <span>第 <b id="yIdx">1</b> / <span id="yTot">10</span> 题</span>
+        <span id="yTimer">00:00</span>
+      </div>
+      <div class="mdots" id="ydots"></div>
+      <div class="qcard">
+        <button class="star" id="ystar" title="收藏本题（F）">☆</button>
+        <div class="qmeta">
+          <span class="no" id="yno">第 1 题</span>
+          <span class="sec" id="ytag"></span>
+        </div>
+        <div class="qtext" id="yqtext"></div>
+        <div class="opts" id="yopts"></div>
+        <div class="exp" id="yexp">
+          <div class="verdict" id="yverdict"></div>
+          <div class="expline"><span class="lbl">解析</span><span class="val" id="yexpl"></span></div>
+        </div>
+      </div>
+      <div class="qnav">
+        <button class="btn" id="yprev">上一题</button>
+        <button class="btn main" id="ynext">下一题</button>
+      </div>
+      <div class="qnav">
+        <button class="btn" id="yfinish">交卷看成绩</button>
+        <button class="btn" id="yquit">退出本组</button>
+      </div>
+    </div>
+
+    <div id="yDone" style="display:none">
+      <div class="mhero">
+        <div class="mt" id="yScoreT">—</div>
+        <div class="ms" id="yScoreS"></div>
+        <div class="mrow">
+          <div><div class="k">正确</div><div class="v" id="yRight">0</div></div>
+          <div><div class="k">错误</div><div class="v" id="yWrong">0</div></div>
+          <div><div class="k">用时</div><div class="v" id="yUsed">—</div></div>
+        </div>
+      </div>
+      <div class="sec-title">这一组的错题</div>
+      <div class="list" id="yWrongList"></div>
+      <div class="qnav">
+        <button class="btn main" id="yAgain">再来一组</button>
+        <button class="btn" id="yBack">回到开始页</button>
+      </div>
+    </div>
+  </section>
 </main>
 
 <div class="mask" id="mask">
@@ -608,7 +698,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   </div>
 </div>
 
-<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系现收工程问题 46 道、集合容斥 40 道（每题答案由程序校验）</p>
+<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系收工程问题 46 道、集合容斥 40 道，言语理解收选词填空 23 道、片段阅读 21 道、语句表达 16 道（每题答案均由程序校验）</p>
 
 <div class="mask" id="cloudMask">
   <div class="sheet">
@@ -629,6 +719,7 @@ const QUIZ = __QUIZ__;
 const VOCAB = __VOCAB__;
 const KNOW = __KNOW__;
 const MATH = __MATH__;
+const YANYU = __YANYU__;
 const CLOUD = __CLOUD__;
 const PAPERS = QUIZ.papers;
 
@@ -636,10 +727,12 @@ const APIQ = 'http://127.0.0.1:8760/api/progress';
 const APIV = 'http://127.0.0.1:8760/api/vocab';
 const APIK = 'http://127.0.0.1:8760/api/know';
 const APIM = 'http://127.0.0.1:8760/api/math';
+const APIY = 'http://127.0.0.1:8760/api/yanyu';
 const AKEY = 'gdquiz2-answers', FKEY = 'gdquiz2-favs', UKEY = 'gdquiz2-updated';
 const VFKEY = 'gdvocab-favs', VUKEY = 'gdvocab-updated';
 const KFKEY = 'gdknow-favs', KUKEY = 'gdknow-updated';
 const MSKEY = 'gdmath-stat', MFKEY = 'gdmath-favs', MUKEY = 'gdmath-updated', MLKEY = 'gdmath-last';
+const YSKEY = 'gdyan-stat', YFKEY = 'gdyan-favs', YUKEY = 'gdyan-updated', YLKEY = 'gdyan-last';
 const $ = s => document.querySelector(s);
 
 /* ================= 状态 ================= */
@@ -663,6 +756,14 @@ try { mfavs = JSON.parse(localStorage.getItem(MFKEY) || '{}'); } catch(e){ mfavs
 let mAt = Number(localStorage.getItem(MUKEY) || 0) || 0;
 let mLast = null;
 try { mLast = JSON.parse(localStorage.getItem(MLKEY) || 'null'); } catch(e){ mLast = null; }
+
+let ystat = {};
+try { ystat = JSON.parse(localStorage.getItem(YSKEY) || '{}'); } catch(e){ ystat = {}; }
+let yfavs = {};
+try { yfavs = JSON.parse(localStorage.getItem(YFKEY) || '{}'); } catch(e){ yfavs = {}; }
+let yAt = Number(localStorage.getItem(YUKEY) || 0) || 0;
+let yLast = null;
+try { yLast = JSON.parse(localStorage.getItem(YLKEY) || 'null'); } catch(e){ yLast = null; }
 
 // 迁移旧单期页（gdquiz-<id> / gdquiz-<id>-fav）
 (function(){
@@ -693,11 +794,11 @@ const IS_LOCAL = (location.hostname === '127.0.0.1' || location.hostname === 'lo
 const SYNC_HOST = 'wbapp-cmvrw789ihbe3hosa43jcr.app.workbuddy.host';
 const PRIMARY_URL = 'https://wbapp-cmvrw789ihbe3hosa43jcr.app.workbuddy.host/?sharecode=XD7NFFZQ3Y';
 const CAN_SYNC = (location.hostname === SYNC_HOST);
-const sync = { q:'idle', v:'idle', k:'idle', m:'idle' };
-const syncMsg = { q:'', v:'', k:'', m:'' };
+const sync = { q:'idle', v:'idle', k:'idle', m:'idle', y:'idle' };
+const syncMsg = { q:'', v:'', k:'', m:'', y:'' };
 function setSync(){
   const el = $('#sync');
-  const all = [sync.q, sync.v, sync.k, sync.m];
+  const all = [sync.q, sync.v, sync.k, sync.m, sync.y];
   const isLocalOnly = (all.every(x => x === 'local')) && cloudState.mode !== 'cloud';
   const bad = all.some(x => x === 'off');
   const okAll = all.every(x => x === 'ok');
@@ -772,10 +873,20 @@ function saveMath(){
   post(APIM, {answers: mstat, favs: mfavs, updatedAt: mAt}, 'm').catch(() => {});
   cloudTouch();
 }
+function saveYan(){
+  yAt = Date.now();
+  try {
+    localStorage.setItem(YSKEY, JSON.stringify(ystat));
+    localStorage.setItem(YFKEY, JSON.stringify(yfavs));
+    localStorage.setItem(YUKEY, String(yAt));
+  } catch(e){}
+  post(APIY, {answers: ystat, favs: yfavs, updatedAt: yAt}, 'y').catch(() => {});
+  cloudTouch();
+}
 
 function pullAll(){
   if(!IS_LOCAL){
-    sync.q = sync.v = sync.k = sync.m = 'local';
+    sync.q = sync.v = sync.k = sync.m = sync.y = 'local';
     setSync();
     renderHome();
     return;
@@ -836,14 +947,31 @@ function pullAll(){
     }
     setSync(); renderHome();
   }).catch(e => { sync.m = 'off'; syncMsg.m = 'GET math 失败：' + (e && e.name || 'x'); setSync(); });
+
+  getJSON(APIY + '?t=' + Date.now()).then(s => {
+    sync.y = 'ok';
+    const at = Number(s.updatedAt || 0) || 0;
+    if(at > yAt + 500){
+      ystat = s.answers || {}; yfavs = s.favs || {}; yAt = at;
+      try {
+        localStorage.setItem(YSKEY, JSON.stringify(ystat));
+        localStorage.setItem(YFKEY, JSON.stringify(yfavs));
+        localStorage.setItem(YUKEY, String(yAt));
+      } catch(e){}
+      if(state.view === 'yanyu') renderYanHome();
+    } else if(yAt > at && (Object.keys(ystat).length || Object.keys(yfavs).length)){
+      saveYan();
+    }
+    setSync(); renderHome();
+  }).catch(e => { sync.y = 'off'; syncMsg.y = 'GET yanyu 失败：' + (e && e.name || 'x'); setSync(); });
 }
 /* ================= 路由 ================= */
 const state = { view:'home', pid:'', filter:'all', pos:0, list:[],
                 vmode:'card', vfilter:'all', vkw:'', vpos:0, vlist:[], vopen:false,
                 kmode:'card', kfilter:'all', kkw:'', kpos:0, klist:[], khide:false };
 
-const VIEWS = ['home','quiz','vocab','know','math'];
-const VIEWNAME = {home:'总览', quiz:'每日刷题', vocab:'成语速记', know:'知识点速记', math:'数量关系'};
+const VIEWS = ['home','quiz','vocab','know','math','yanyu'];
+const VIEWNAME = {home:'总览', quiz:'每日刷题', vocab:'成语速记', know:'知识点速记', math:'数量关系', yanyu:'言语理解'};
 
 function go(view){
   state.view = view;
@@ -857,6 +985,7 @@ function go(view){
   if(view === 'vocab'){ buildVocabChips(); buildVocabList(); renderVocab(); }
   if(view === 'know'){ buildKnowChips(); buildKnowList(); renderKnow(); }
   if(view === 'math'){ renderMathHome(); renderMathView(); }
+  if(view === 'yanyu'){ renderYanHome(); renderYanView(); }
 }
 
 document.querySelectorAll('[data-go]').forEach(b => { b.onclick = () => go(b.dataset.go); });
@@ -1040,7 +1169,7 @@ $('#resetAll').onclick = () => {
 $('#expBtn').onclick = () => {
   const pad = n => String(n).padStart(2,'0');
   const d = new Date();
-  const data = { app:'gdquiz', v:4, exportedAt:d.toISOString(), answers, favs, vfavs, kfavs, mstat, mfavs };
+  const data = { app:'gdquiz', v:5, exportedAt:d.toISOString(), answers, favs, vfavs, kfavs, mstat, mfavs, ystat, yfavs };
   const blob = new Blob([JSON.stringify(data, null, 1)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1064,12 +1193,14 @@ $('#impFile').onchange = e => {
       Object.keys(o.kfavs || {}).forEach(k => { if(!kfavs[k] && o.kfavs[k]){ kfavs[k] = 1; nk++; } });
       Object.keys(o.mfavs || {}).forEach(k => { if(!mfavs[k] && o.mfavs[k]){ mfavs[k] = 1; nk++; } });
       Object.keys(o.mstat || {}).forEach(k => { if(!mstat[k] && o.mstat[k]){ mstat[k] = o.mstat[k]; nk++; } });
-      saveQuiz(); saveVocab(); saveKnow(); saveMath(); closeSheet();
+      Object.keys(o.yfavs || {}).forEach(k => { if(!yfavs[k] && o.yfavs[k]){ yfavs[k] = 1; nk++; } });
+      Object.keys(o.ystat || {}).forEach(k => { if(!ystat[k] && o.ystat[k]){ ystat[k] = o.ystat[k]; nk++; } });
+      saveQuiz(); saveVocab(); saveKnow(); saveMath(); saveYan(); closeSheet();
       buildQuizList(); renderQuiz(); buildTabs();
       buildVocabChips(); buildVocabList(); renderVocab();
       buildKnowChips(); buildKnowList(); renderKnow();
-      renderMathHome(); renderHome();
-      alert('已恢复：作答 ' + na + ' 题、题目收藏 ' + nf + ' 条、成语收藏 ' + nv + ' 条、知识点/数量关系收藏与记录 ' + nk + ' 条。');
+      renderMathHome(); renderYanHome(); renderHome();
+      alert('已恢复：作答 ' + na + ' 题、题目收藏 ' + nf + ' 条、成语收藏 ' + nv + ' 条、知识点/数量关系/言语理解收藏与记录 ' + nk + ' 条。');
     }catch(err){ alert('这个文件读不出来，请选择本平台导出的 json。'); }
     e.target.value = '';
   };
@@ -1606,19 +1737,280 @@ $('#mResetBtn').onclick = () => {
 };
 
 
+/* ================= 言语理解 ================= */
+const YSET_N = 10;
+let yset = null;
+let yView = 'start';
+let yTimerId = 0;
+let yCat = 'all';
+
+const YCATS = Array.from(new Set(YANYU.map(x => x.cat)));
+const yBase = () => (yCat === 'all' ? YANYU : YANYU.filter(x => x.cat === yCat));
+const yById = id => YANYU.find(x => x.id === id);
+const YLET = ['A','B','C','D'];
+
+function pickYIds(mode){
+  const base = yBase();
+  if(mode === 'fav'){
+    return shuffle(base.filter(x => yfavs[x.id]).map(x => x.id)).slice(0, YSET_N);
+  }
+  const fresh = base.filter(x => !ystat[x.id]).map(x => x.id);
+  const done = base.filter(x => ystat[x.id]).map(x => x.id);
+  let out = shuffle(fresh);
+  if(out.length < YSET_N) out = out.concat(shuffle(done));
+  return out.slice(0, YSET_N);
+}
+
+function buildYanChips(){
+  const box = $('#ychips');
+  if(!box) return;
+  box.innerHTML = '';
+  const rows = [['all', '全部 ' + YANYU.length]]
+    .concat(YCATS.map(c => [c, c + ' ' + YANYU.filter(x => x.cat === c).length]));
+  rows.forEach(([c, label]) => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (yCat === c ? ' on' : '');
+    b.textContent = label;
+    b.onclick = () => { yCat = c; renderYanHome(); };
+    box.appendChild(b);
+  });
+}
+
+function startYanSet(mode){
+  const ids = pickYIds(mode);
+  if(!ids.length){
+    const scope = yCat === 'all' ? '' : '「' + yCat + '」里';
+    alert(mode === 'fav' ? scope + '还没有收藏的题。先做一组，点题目右上角的 ☆ 收藏几道。' : '题库是空的。');
+    return;
+  }
+  yset = { ids, pos: 0, pick: {}, t0: Date.now(), mode };
+  yView = 'run';
+  startYTimer();
+  renderYanView();
+  renderY();
+  window.scrollTo({top:0});
+}
+
+function startYTimer(){
+  clearInterval(yTimerId);
+  const tick = () => {
+    const s = Math.floor((Date.now() - (yset ? yset.t0 : Date.now())) / 1000);
+    $('#yTimer').textContent = String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0');
+  };
+  tick();
+  yTimerId = setInterval(tick, 1000);
+}
+function stopYTimer(){ clearInterval(yTimerId); yTimerId = 0; }
+
+function renderYanView(){
+  $('#yStart').style.display = yView === 'start' ? '' : 'none';
+  $('#yRun').style.display = yView === 'run' ? '' : 'none';
+  $('#yDone').style.display = yView === 'done' ? '' : 'none';
+}
+
+function buildYDots(){
+  const box = $('#ydots');
+  box.innerHTML = '';
+  if(!yset) return;
+  yset.ids.forEach((id, i) => {
+    const el = document.createElement('i');
+    el.textContent = i + 1;
+    const pick = yset.pick[id];
+    if(pick) el.classList.add(pick === YLET[yById(id).ans] ? 'r' : 'w');
+    if(i === yset.pos) el.classList.add('cur');
+    el.onclick = () => { yset.pos = i; renderY(); };
+    box.appendChild(el);
+  });
+}
+
+function renderY(){
+  if(!yset) return;
+  const id = yset.ids[yset.pos];
+  const q = yById(id);
+  $('#yTot').textContent = yset.ids.length;
+  $('#yIdx').textContent = yset.pos + 1;
+  $('#yno').textContent = '第 ' + (yset.pos + 1) + ' 题';
+  $('#ytag').textContent = q.cat + '　·　' + q.tag;
+  $('#yqtext').textContent = q.t;
+
+  const on = !!yfavs[id];
+  $('#ystar').textContent = on ? '★' : '☆';
+  $('#ystar').classList.toggle('on', on);
+  $('#ystar').onclick = () => {
+    if(yfavs[id]) delete yfavs[id]; else yfavs[id] = 1;
+    saveYan(); renderY(); renderYanHome(); renderHome();
+  };
+
+  const sel = yset.pick[id];
+  const box = $('#yopts');
+  box.innerHTML = '';
+  YLET.forEach((k, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.innerHTML = '<span class="k"></span><span class="t"></span>';
+    b.querySelector('.k').textContent = k;
+    b.querySelector('.t').textContent = q.opts[i] || '';
+    if(sel){
+      b.classList.add('done');
+      if(i === q.ans) b.classList.add('correct');
+      else if(k === sel) b.classList.add('wrong');
+      else b.classList.add('dim');
+    } else {
+      b.onclick = () => chooseY(k);
+    }
+    box.appendChild(b);
+  });
+
+  const exp = $('#yexp');
+  if(sel){
+    exp.classList.add('show');
+    const ok = YLET[q.ans] === sel;
+    const v = $('#yverdict');
+    v.className = 'verdict ' + (ok ? 'ok' : 'bad');
+    v.innerHTML = (ok ? '✓ 回答正确' : '✗ 回答错误') + '<span class="badge">正确答案 ' + YLET[q.ans] + '</span>';
+    $('#yexpl').textContent = q.exp || '';
+  } else {
+    exp.classList.remove('show');
+  }
+  buildYDots();
+}
+
+function chooseY(k){
+  if(!yset) return;
+  const id = yset.ids[yset.pos];
+  if(yset.pick[id]) return;
+  const q = yById(id);
+  yset.pick[id] = k;
+  ystat[id] = (k === YLET[q.ans]) ? 'r' : 'w';
+  saveYan();
+  renderY();
+  renderYanHome();
+  renderHome();
+}
+
+function goY(step){
+  if(!yset) return;
+  yset.pos = (yset.pos + step + yset.ids.length) % yset.ids.length;
+  renderY();
+}
+
+function finishY(){
+  if(!yset) return;
+  stopYTimer();
+  const total = yset.ids.length;
+  let right = 0;
+  const wrongIds = [];
+  yset.ids.forEach(id => {
+    const pick = yset.pick[id];
+    const q = yById(id);
+    if(pick && pick === YLET[q.ans]) right++;
+    else if(pick) wrongIds.push(id);
+  });
+  const used = Math.round((Date.now() - yset.t0) / 1000);
+  yLast = { at: Date.now(), total, right, used, wrongIds, answered: Object.keys(yset.pick).length };
+  try { localStorage.setItem(YLKEY, JSON.stringify(yLast)); } catch(e){}
+  yView = 'done';
+
+  $('#yScoreT').textContent = '本组 ' + right + ' / ' + total;
+  const rate = Math.round(right / total * 100);
+  $('#yScoreS').textContent = rate >= 80 ? '稳了，这个正确率考场够用。'
+    : rate >= 60 ? '基本盘在，错的题回去看解析里「为什么排除」那一句。'
+    : '言语理解靠的是题干对应，先把每个错误选项的排除理由读一遍。';
+  $('#yRight').textContent = right;
+  $('#yWrong').textContent = total - right;
+  $('#yUsed').textContent = Math.floor(used / 60) + '分' + (used % 60) + '秒';
+
+  const box = $('#yWrongList');
+  box.innerHTML = '';
+  if(!wrongIds.length){
+    box.innerHTML = '<div class="prow" style="cursor:default"><div class="i">这一组没有错题。</div></div>';
+  } else {
+    wrongIds.forEach(id => {
+      const q = yById(id);
+      const row = document.createElement('div');
+      row.className = 'prow';
+      row.innerHTML = '<div><div class="d" style="font-size:13.5px;line-height:1.7"></div>' +
+                      '<div class="i"></div></div><div class="meta">重看 →</div>';
+      const d = q.t.replace(/\n/g, ' ');
+      row.querySelector('.d').textContent = d.length > 46 ? d.slice(0, 46) + '…' : d;
+      row.querySelector('.i').textContent = '你的答案 ' + yset.pick[id] + '　正确答案 ' + YLET[q.ans] + '　·　' + q.cat + '／' + q.tag;
+      row.onclick = () => { yset.pos = yset.ids.indexOf(id); yView = 'run'; renderYanView(); renderY(); window.scrollTo({top:0}); };
+      box.appendChild(row);
+    });
+  }
+  renderYanView();
+  renderYanHome();
+  renderHome();
+  window.scrollTo({top:0});
+}
+
+function renderYanHome(){
+  buildYanChips();
+  const base = yBase();
+  const done = base.filter(x => ystat[x.id]).length;
+  let r = 0;
+  base.forEach(x => { if(ystat[x.id] === 'r') r++; });
+  if($('#yPool')) $('#yPool').textContent = base.length;
+  if($('#yDoneN')) $('#yDoneN').textContent = done;
+  if($('#yFavN')) $('#yFavN').textContent = base.filter(x => yfavs[x.id]).length;
+  if($('#yRate')) $('#yRate').textContent = done ? Math.round(r / done * 100) + '%' : '—';
+
+  const box = $('#yLast');
+  if(!box) return;
+  if(!yLast){
+    box.innerHTML = '<div class="prow" style="cursor:default"><div class="i">还没做过。点上面的按钮随机来一组 10 道。</div></div>';
+  } else {
+    const d = new Date(yLast.at);
+    box.innerHTML = '<div class="prow" style="cursor:default"><div><div class="d">' + yLast.right + ' / ' + yLast.total +
+      '　正确率 ' + Math.round(yLast.right / yLast.total * 100) + '%</div>' +
+      '<div class="i">' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' +
+      String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') +
+      '　用时 ' + Math.floor(yLast.used / 60) + '分' + (yLast.used % 60) + '秒' +
+      (yLast.wrongIds && yLast.wrongIds.length ? '　错 ' + yLast.wrongIds.length + ' 道' : '') + '</div></div>' +
+      '<div class="meta">' + (yLast.wrongIds && yLast.wrongIds.length ? '回看 →' : '') + '</div></div>';
+    if(yLast.wrongIds && yLast.wrongIds.length){
+      box.querySelector('.prow').onclick = () => {
+        yset = { ids: yLast.wrongIds.slice(), pos: 0, pick: {}, t0: Date.now(), mode: 'review' };
+        yView = 'run'; startYTimer(); renderYanView(); renderY();
+      };
+    }
+  }
+}
+
+$('#yStartBtn').onclick = () => startYanSet('random');
+$('#yFavBtn').onclick = () => startYanSet('fav');
+$('#yAgain').onclick = () => startYanSet('random');
+$('#yBack').onclick = () => { yView = 'start'; yset = null; renderYanView(); renderYanHome(); };
+$('#yprev').onclick = () => goY(-1);
+$('#ynext').onclick = () => goY(1);
+$('#yfinish').onclick = () => finishY();
+$('#yquit').onclick = () => {
+  if(yset && Object.keys(yset.pick).length && !confirm('本组还没交卷，退出后这一组的作答不记录成绩（已作答的题仍算做过）。确定退出？')) return;
+  stopYTimer(); yset = null; yView = 'start'; renderYanView(); renderYanHome(); renderHome();
+};
+$('#yResetBtn').onclick = () => {
+  if(!confirm('清空言语理解的做题记录与收藏？（其他模块不受影响）')) return;
+  ystat = {}; yfavs = {}; yLast = null;
+  try { localStorage.removeItem(YLKEY); } catch(e){}
+  saveYan(); renderYanHome(); renderHome();
+};
+
+
 /* ================= 云端同步（仅线上） ================= */
 const cloudState = { mode:'local', ready:false, session:null, err:'', busy:false, remoteFilled:false };
 let cloud = null;
 let pushTimer = 0;
 
-const localMaxAt = () => Math.max(qAt || 0, vAt || 0, kAt || 0, mAt || 0);
+const localMaxAt = () => Math.max(qAt || 0, vAt || 0, kAt || 0, mAt || 0, yAt || 0);
 
 // 空态判断：换设备登录时最怕拿一张空表把云端冲掉，所以空的一律不算"更新"
 const isBlank = o => !o || Object.keys(o).length === 0;
 const localEmpty = () => isBlank(answers) && isBlank(favs) && isBlank(vfavs)
-  && isBlank(kfavs) && isBlank(mstat) && isBlank(mfavs);
+  && isBlank(kfavs) && isBlank(mstat) && isBlank(mfavs)
+  && isBlank(ystat) && isBlank(yfavs);
 const payloadEmpty = p => !p || (isBlank(p.answers) && isBlank(p.favs) && isBlank(p.vfavs)
-  && isBlank(p.kfavs) && isBlank(p.mstat) && isBlank(p.mfavs));
+  && isBlank(p.kfavs) && isBlank(p.mstat) && isBlank(p.mfavs)
+  && isBlank(p.ystat) && isBlank(p.yfavs));
 
 function cloudInit(){
   if(!CLOUD || IS_LOCAL || !window.WorkBuddyCloud){
@@ -1683,8 +2075,9 @@ function applyPayload(p){
   answers = p.answers || {}; favs = p.favs || {};
   vfavs = p.vfavs || {}; kfavs = p.kfavs || {};
   mstat = p.mstat || {}; mfavs = p.mfavs || {};
+  ystat = p.ystat || {}; yfavs = p.yfavs || {};
   const at = Number(p.updatedAt || 0) || Date.now();
-  qAt = vAt = kAt = mAt = at;
+  qAt = vAt = kAt = mAt = yAt = at;
   try{
     localStorage.setItem(AKEY, JSON.stringify(answers));
     localStorage.setItem(FKEY, JSON.stringify(favs));
@@ -1696,11 +2089,14 @@ function applyPayload(p){
     localStorage.setItem(MSKEY, JSON.stringify(mstat));
     localStorage.setItem(MFKEY, JSON.stringify(mfavs));
     localStorage.setItem(MUKEY, String(mAt));
+    localStorage.setItem(YSKEY, JSON.stringify(ystat));
+    localStorage.setItem(YFKEY, JSON.stringify(yfavs));
+    localStorage.setItem(YUKEY, String(yAt));
   }catch(e){}
   buildQuizList(); buildTabs && buildTabs(); renderQuiz && renderQuiz();
   buildVocabChips(); buildVocabList(); renderVocab();
   buildKnowChips(); buildKnowList(); renderKnow();
-  renderMathHome(); renderHome();
+  renderMathHome(); renderYanHome && renderYanHome(); renderHome();
 }
 
 async function cloudPull(){
@@ -1740,7 +2136,7 @@ async function cloudPush(){
   if(!cloud || !cloudState.session) return;
   // 本机一片空白而云端有货：多半是新设备刚登录，别把云端冲掉
   if(localEmpty() && cloudState.remoteFilled) return;
-  const payload = { answers, favs, vfavs, kfavs, mstat, mfavs, updatedAt: Date.now() };
+  const payload = { answers, favs, vfavs, kfavs, mstat, mfavs, ystat, yfavs, updatedAt: Date.now() };
   const name = (cloudState.session.user && cloudState.session.user.name) || null;
   try{
     const { error } = await cloud.database.from('study_state').upsert(
@@ -1890,6 +2286,9 @@ function renderHome(){
   const mf = Object.keys(mfavs).length;
   const mDone = MATH.filter(x => mstat[x.id]).length;
   $('#mfavN').textContent = mf;
+  const yf = Object.keys(yfavs).length;
+  const yDone = YANYU.filter(x => ystat[x.id]).length;
+  if($('#yfavN')) $('#yfavN').textContent = yf;
 
   $('#hDone').innerHTML = s.done + '<small> / ' + s.total + '</small>';
   $('#hRate').textContent = s.rate === null ? '—' : s.rate + '%';
@@ -1905,6 +2304,9 @@ function renderHome(){
   $('#tKnowBar').style.width = (kf / (KNOW.length || 1) * 100).toFixed(1) + '%';
   $('#tMathDone').innerHTML = mDone + '<small> 道已做</small>';
   $('#tMathBar').style.width = (mDone / (MATH.length || 1) * 100).toFixed(1) + '%';
+  if($('#hYan')) $('#hYan').innerHTML = yf + '<small> 道</small>';
+  if($('#tYanDone')) $('#tYanDone').innerHTML = yDone + '<small> 道已做</small>';
+  if($('#tYanBar')) $('#tYanBar').style.width = (yDone / (YANYU.length || 1) * 100).toFixed(1) + '%';
 
   const box = $('#paperList');
   box.innerHTML = '';
@@ -1982,6 +2384,13 @@ document.addEventListener('keydown', e => {
     else if(e.key === 'ArrowLeft') goM(-1);
     else if(e.key === 'ArrowRight') goM(1);
     else if(k === 'F'){ const id = mset.ids[mset.pos]; if(mfavs[id]) delete mfavs[id]; else mfavs[id] = 1; saveMath(); renderM(); renderHome(); }
+  } else if(state.view === 'yanyu' && yView === 'run' && yset){
+    const k = e.key.toUpperCase();
+    if(['1','2','3','4'].includes(k)) chooseY(['A','B','C','D'][+k - 1]);
+    else if(['A','B','C','D'].includes(k)) chooseY(k);
+    else if(e.key === 'ArrowLeft') goY(-1);
+    else if(e.key === 'ArrowRight') goY(1);
+    else if(k === 'F'){ const id = yset.ids[yset.pos]; if(yfavs[id]) delete yfavs[id]; else yfavs[id] = 1; saveYan(); renderY(); renderHome(); }
   }
 });
 
@@ -2027,12 +2436,14 @@ def main() -> None:
     vocab = load_vocab()
     know = load_know()
     math = load_math()
+    yanyu = load_yanyu()
     cloud = load_cloud()
     html = (TEMPLATE
             .replace("__QUIZ__", json.dumps(quiz, ensure_ascii=False, separators=(",", ":")))
             .replace("__VOCAB__", json.dumps(vocab, ensure_ascii=False, separators=(",", ":")))
             .replace("__KNOW__", json.dumps(know, ensure_ascii=False, separators=(",", ":")))
             .replace("__MATH__", json.dumps(math, ensure_ascii=False, separators=(",", ":")))
+            .replace("__YANYU__", json.dumps(yanyu, ensure_ascii=False, separators=(",", ":")))
             .replace("__CLOUD_SDK__", load_cloud_sdk())
             .replace("__CLOUD__", json.dumps(cloud or None, ensure_ascii=False, separators=(",", ":"))))
     OUT.write_text(html, encoding="utf-8")
@@ -2053,7 +2464,8 @@ def main() -> None:
     (PAGES / ".nojekyll").write_text("", encoding="utf-8")
 
     total = sum(len(p["questions"]) for p in quiz["papers"])
-    print(f"OK  {len(quiz['papers'])} 期 / {total} 题 + {len(vocab)} 条成语 + {len(know)} 条知识点 + {len(math)} 道数量关系 -> {OUT}")
+    print(f"OK  {len(quiz['papers'])} 期 / {total} 题 + {len(vocab)} 条成语 + {len(know)} 条知识点 "
+          f"+ {len(math)} 道数量关系 + {len(yanyu)} 道言语理解 -> {OUT}")
 
 
 if __name__ == "__main__":
