@@ -316,6 +316,22 @@ SOURCES = [
 
 B2024 = SRC / "资料/2-【南方电网】专业部分（60%）/3.不同专业笔试资料"
 JOB = re.compile(r"(?:习题集|模拟卷\d|高频题库)[-－](.+?类)")
+DROP_CATS = {"通信", "电气", "行测"}
+DROP_JOB = ("·电气类", "·信息通信类")     # 这两个岗位卷的专业题，随上面三类一起去掉
+
+
+def keep_item(it: dict) -> bool:
+    """剔除电气 / 通信 / 行测。
+
+    电气类、信息通信类岗位卷里没被小节归类的题会落到「岗位模拟卷」，
+    这些也是那两门的专业题，按 tag 一并剔除；卷子里归到计算机基础、
+    法律等公共科目的题保留。
+    """
+    if it["cat"] in DROP_CATS:
+        return False
+    if it["cat"] == "岗位模拟卷" and any(j in it["tag"] for j in DROP_JOB):
+        return False
+    return True
 
 
 def extra_sources() -> list[tuple[str, str, Path, Path]]:
@@ -338,10 +354,7 @@ def extra_sources() -> list[tuple[str, str, Path, Path]]:
             ap = cands[0]
         name = qp.stem
         if "行测400题" in name:
-            m = re.search(r"行测400题[-－](.+?)[-－]学生版", name)
-            part = m.group(1) if m else "行测"
-            out.append(("行测", f"2024 行测400题·{part}", qp, ap))
-            continue
+            continue                      # 行测整类不要（2026-11-21 用户要求去掉）
         m = JOB.search(name)
         job = m.group(1) if m else "综合类"
         if "习题集" in name:
@@ -380,6 +393,11 @@ def main() -> None:
         print(f"  {tag:22s} {len(items):4d} 题")
         allitems.extend(items)
 
+    # 只留公共科目：通信 / 电气 / 行测 三类不要（2026-11-21 用户要求）
+    before = len(allitems)
+    allitems = [it for it in allitems if keep_item(it)]
+    print(f"\n  剔除通信/电气/行测：{before} → {len(allitems)}")
+
     # 去重：题干前 24 字相同视为重复
     seen, uniq = set(), []
     for it in allitems:
@@ -396,7 +414,7 @@ def main() -> None:
     print("科目分布", dict(Counter(x["cat"] for x in uniq)))
     print("答案分布", dict(Counter(x["ans"] for x in uniq)))
 
-    doc = {"updated": "2026-11-20", "topic": "南方电网笔试", "items": uniq}
+    doc = {"updated": "2026-11-21", "topic": "南方电网笔试", "items": uniq}
     OUT.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
     print("已写入", OUT.name, OUT.stat().st_size, "字节")
 
