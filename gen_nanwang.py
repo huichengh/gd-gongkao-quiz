@@ -30,6 +30,8 @@ OP_A = re.compile(r"^\s*([A-D])\s*[.．、]\s*(.*)$")
 OP_B = re.compile(r"^\s*([A-D])\s*[。．.]\s*(.*)$")
 NUM_A = re.compile(r"^\s*(\d{1,3})\s*[.．、]\s*(.*)$")
 ANS_A = re.compile(r"^\s*(\d{1,3})\s*[.．、]?\s*【答案】\s*([ABCD]{1,4})")
+ANS_A2 = re.compile(r"^\s*(\d{1,3})\s*[.．、]\s*【([ABCD]{1,4})】")   # 「1.【D】」
+TYPE_ONLY = {"单选题", "多选题", "判断题", "不定项选择题", "单选题型", "单选", "多选"}
 ANS_B = re.compile(r"^\s*(\d{1,3})\s*[.．、]\s*(.*?)\s*[。.]?\s*答案\s*[：:]\s*([ABCD])")
 ANS_B2 = re.compile(r"^\s*答案\s*[：:]\s*([ABCD])")
 
@@ -112,6 +114,9 @@ def parse_questions(path: Path) -> list[dict]:
             m = NUM_A.match(lines[k])
             if m:
                 num, stem = int(m.group(1)), m.group(2).strip()
+                if not stem or stem in TYPE_ONLY:
+                    # 有的排版把题号单独占一行（"1．"），或写成「1.单选题」，题干在后面几行
+                    stem = "".join(lines[k + 1:idx]).strip()
                 break
             if is_heading(lines[k]):
                 break
@@ -129,7 +134,7 @@ def parse_answers(path: Path) -> list[dict]:
     out, head, i = [], "", 0
     while i < len(lines):
         s = lines[i]
-        m = ANS_A.match(s)
+        m = ANS_A.match(s) or ANS_A2.match(s)
         if m:
             num, letter = int(m.group(1)), m.group(2)
             multi = len(letter) > 1        # 多选先占位，配对后再丢，避免序列缺号
@@ -137,12 +142,14 @@ def parse_answers(path: Path) -> list[dict]:
             j = i + 1
             while j < len(lines):
                 t = lines[j]
-                if ANS_A.match(t) or NUM_A.match(t) or is_heading(t):
+                if ANS_A.match(t) or ANS_A2.match(t) or NUM_A.match(t) or is_heading(t):
                     break
                 body.append(t)
                 j += 1
+            exp = "".join(body).strip()
+            exp = re.sub(r"^解析[：:]\s*", "", exp)
             out.append({"head": head, "num": num, "ans": letter[0], "multi": multi,
-                        "exp": "".join(body).strip()})
+                        "exp": exp})
             i = j
             continue
         if is_heading(s):
@@ -269,6 +276,20 @@ SOURCES = [
     ("法律", "刑法", "法律/刑法.pdf", "法律/刑法答案.pdf"),
     ("法律", "宪法", "法律/宪法.pdf", "法律/宪法答案.pdf"),
     ("法律", "法理学", "法律/法理学.pdf", "法律/法理学答案.pdf"),
+    # —— 第二批：同一批讲义里先前漏掉的题库（2026-11-20 补）——
+    ("计算机基础", "Office 办公", "计算机基础/office相关课程题库-讲义.pdf",
+     "计算机基础/office相关课程题库-答案.pdf"),
+    ("公文写作", "公文写作与处理", "公文/【22页】公文写作与处理专项答案及解析.pdf",
+     "公文/【22页】公文写作与处理专项答案及解析.pdf"),
+    ("经济学", "微观宏观经济学", "经济/经济.pdf", "经济/经济答案.pdf"),
+    ("马克思主义", "马克思主义哲学", "马克思/马克思主义哲学.pdf", "马克思/马克思主义哲学答案.pdf"),
+    ("法律", "民事诉讼法", "法律/民事诉讼法.pdf", "法律/民事诉讼法答案.pdf"),
+    ("法律", "刑事诉讼法", "法律/刑事诉讼法.pdf", "法律/刑事诉讼法答案.pdf"),
+    ("法律", "刑法", "法律/刑法2.pdf", "法律/刑法答案2.pdf"),
+    ("法律", "法理学", "法律/法理学1.pdf", "法律/法理学答案1.pdf"),
+    ("常识判断", "地理国情",
+     "资料/5-【南方电网】综合类笔试资料/2、【综合知识10％】南方电网应知应会常识题库/地理国情330题.pdf",
+     "资料/5-【南方电网】综合类笔试资料/2、【综合知识10％】南方电网应知应会常识题库/地理国情330题答案.pdf"),
 ]
 
 
