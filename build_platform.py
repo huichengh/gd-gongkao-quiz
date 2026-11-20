@@ -718,7 +718,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
     <div id="nStart">
       <div class="mhero">
         <div class="mt">南方电网 · 笔试专项</div>
-        <div class="ms">管理学、经济学、计算机、马克思主义、法律、公文、企业文化七个科目。<br>背题模式直接看题干／选项／解析，随机刷题按 10 道一组判对错。</div>
+        <div class="ms">十二个科目：管理学、经济学、计算机基础、法律、常识判断、马克思主义、公文写作、企业文化、电气、通信、行测、岗位模拟卷。<br>背题模式直接看题干／选项／解析，随机刷题按 10 道一组判对错。</div>
         <div class="mrow">
           <div><div class="k">题库</div><div class="v"><span id="nPool">0</span><small> 道</small></div></div>
           <div><div class="k">已做过</div><div class="v"><span id="nDoneN">0</span><small> 道</small></div></div>
@@ -838,7 +838,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   </div>
 </div>
 
-<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系收工程问题 46 道、集合容斥 40 道，言语理解收选词填空 23 道、片段阅读 21 道、语句表达 16 道，南方电网 1541 道取自《南网中公》资料、只在本模块使用（每题答案均由程序校验）</p>
+<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系收工程问题 46 道、集合容斥 40 道，言语理解收选词填空 23 道、片段阅读 21 道、语句表达 16 道，南方电网 3276 道取自《南网中公》资料、只在本模块使用（每题答案均由程序校验）</p>
 
 <div class="mask" id="cloudMask">
   <div class="sheet">

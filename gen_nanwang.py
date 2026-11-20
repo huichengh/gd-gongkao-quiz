@@ -58,6 +58,25 @@ def page_lines(path: Path) -> list[str]:
 
 CHAP = re.compile(r"^第[一二三四五六七八九十百]+\s*[章节]")
 
+# 分节标题 → 科目。2024 那一批卷子按「计算机基础 / 法学综合知识 / 通信部分」这类小节切，
+# 用它把同一份卷子里的题分到不同科目上；认不出来的归到该卷的默认科目。
+SECTION_CAT = {
+    "计算机基础": "计算机基础", "计算机部分": "计算机基础", "计算机": "计算机基础",
+    "计算机知识": "计算机基础", "计算机基础知识": "计算机基础",
+    "法学综合知识": "法律", "法律": "法律", "法律部分": "法律", "法律知识": "法律",
+    "法律基础知识": "法律", "法学": "法律",
+    "经济学": "经济学", "经济部分": "经济学", "微观经济学": "经济学", "宏观经济学": "经济学",
+    "管理学": "管理学", "管理部分": "管理学", "管理学基础": "管理学",
+    "马克思主义": "马克思主义", "马克思主义哲学": "马克思主义", "马原": "马克思主义",
+    "马克思主义基本原理": "马克思主义",
+    "公文写作": "公文写作", "公文写作与处理": "公文写作", "公文部分": "公文写作",
+    "企业文化": "企业文化", "南方电网企业文化": "企业文化",
+    "常识判断": "常识判断", "常识": "常识判断", "地理国情": "常识判断",
+    "通信部分": "通信", "通信": "通信", "通信原理": "通信",
+    "电气": "电气", "电气部分": "电气", "电力系统": "电气", "电力系统分析": "电气",
+    "财会": "财会", "会计": "财会", "财会部分": "财会",
+}
+
 
 def is_chapter(s: str) -> bool:
     return bool(CHAP.match(s)) and len(s) <= 30
@@ -83,11 +102,13 @@ def parse_questions(path: Path) -> list[dict]:
     """
     lines = page_lines(path)
     n = len(lines)
-    qs, head, idx = [], "", 0
+    qs, head, idx, sect = [], "", 0, ""
     while idx < n:
         s = lines[idx]
         if is_chapter(s):
             head = s
+        if s in SECTION_CAT:
+            sect = SECTION_CAT[s]
         if not OP_A.match(s):
             idx += 1
             continue
@@ -122,7 +143,7 @@ def parse_questions(path: Path) -> list[dict]:
                 break
             k -= 1
         if stem:
-            qs.append({"head": head, "num": num, "stem": stem, "opts": [
+            qs.append({"head": head, "sect": sect, "num": num, "stem": stem, "opts": [
                 ("ABCD"[i], v) for i, v in enumerate(opts)]})
         idx = j
     return qs
@@ -207,7 +228,7 @@ def build(cat: str, tag: str, qf: Path, af: Path | None) -> list[dict]:
             continue
         stem = re.sub(r"^[（(]\s*(单选|多选|判断|不定项)[^）)]*[）)]\s*", "", q["stem"].strip())
         items.append({
-            "cat": cat,
+            "cat": q.get("sect") or cat,
             "tag": q["head"] or tag,
             "t": stem,
             "opts": [o[1].strip().rstrip("，,") for o in q["opts"]],
@@ -293,6 +314,47 @@ SOURCES = [
 ]
 
 
+B2024 = SRC / "资料/2-【南方电网】专业部分（60%）/3.不同专业笔试资料"
+JOB = re.compile(r"(?:习题集|模拟卷\d|高频题库)[-－](.+?类)")
+
+
+def extra_sources() -> list[tuple[str, str, Path, Path]]:
+    """2024 那一批：学生版 / 答案版成对，自动发现。
+
+    这些卷子按「计算机基础」「法学综合知识」这类小节切，科目录不进文件名，
+    所以默认科目录「综合」，具体由 SECTION_CAT 在小节处改判。
+    """
+    out = []
+    for qp in sorted(B2024.rglob("*学生版*.pdf")):
+        if "_1204213237" in str(qp):           # 同一批文件的重复目录，跳过
+            continue
+        ap = qp.with_name(qp.name.replace("学生版", "答案版"))
+        if not ap.exists():
+            # 行测 400 题的学生版/答案版页数不同，文件名对不上，按前缀找
+            head = qp.name.split("-学生版")[0]
+            cands = sorted(qp.parent.glob(head + "-答案版*"))
+            if not cands:
+                continue
+            ap = cands[0]
+        name = qp.stem
+        if "行测400题" in name:
+            m = re.search(r"行测400题[-－](.+?)[-－]学生版", name)
+            part = m.group(1) if m else "行测"
+            out.append(("行测", f"2024 行测400题·{part}", qp, ap))
+            continue
+        m = JOB.search(name)
+        job = m.group(1) if m else "综合类"
+        if "习题集" in name:
+            tag = f"2024 习题集·{job}"
+        elif "模拟卷" in name:
+            n = re.search(r"模拟卷(\d)", name)
+            tag = f"2024 模拟卷{n.group(1) if n else ''}·{job}"
+        else:
+            tag = f"2024 高频题库·{job}"
+        out.append(("岗位模拟卷", tag, qp, ap))
+    return out
+
+
 def main() -> None:
     allitems = []
     for cat, tag, qf, af in SOURCES:
@@ -310,6 +372,13 @@ def main() -> None:
     wh = build_wenhua()
     print(f"  {'企业文化':6s} {'企业文化题库':22s} {len(wh):4d} 题")
     allitems.extend(wh)
+
+    extra = extra_sources()
+    print(f"\n  2024 各岗位卷 共 {len(extra)} 份")
+    for cat, tag, qp, ap in extra:
+        items = build(cat, tag, qp, ap)
+        print(f"  {tag:22s} {len(items):4d} 题")
+        allitems.extend(items)
 
     # 去重：题干前 24 字相同视为重复
     seen, uniq = set(), []
