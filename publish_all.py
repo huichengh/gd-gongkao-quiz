@@ -14,10 +14,12 @@
 做三件事：重建 → 提交并推 GitHub → 校验主站是否已同步。
 主站部署走 WorkBuddy 的部署工具，脚本调不到，所以最后会明确告诉你还要不要发。
 """
+import gzip
 import hashlib
 import subprocess
 import sys
 import urllib.request
+import zlib
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
@@ -81,10 +83,20 @@ def commit_and_push(message: str) -> None:
 
 
 def fetch(url: str) -> bytes | None:
-    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    """抓线上文件。必须声明 gzip 并解压：3MB 的页面不压缩会被中途截断，
+    截断的 md5 每次都不同，会误报「还是旧版」。"""
+    req = urllib.request.Request(url, headers={
+        "User-Agent": "Mozilla/5.0",
+        "Accept-Encoding": "gzip, deflate",
+    })
     try:
-        with urllib.request.urlopen(req, timeout=45) as r:
-            return r.read()
+        with urllib.request.urlopen(req, timeout=120) as r:
+            raw = r.read()
+            if r.headers.get("Content-Encoding") == "gzip":
+                raw = gzip.decompress(raw)
+            elif r.headers.get("Content-Encoding") == "deflate":
+                raw = zlib.decompress(raw)
+            return raw
     except Exception as e:
         print(f"   取不到 {url[:52]}…（{type(e).__name__}）")
         return None
