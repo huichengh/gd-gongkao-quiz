@@ -76,6 +76,22 @@ def load_math() -> list[dict]:
     return doc.get("items", [])
 
 
+def load_nanwang() -> list[dict]:
+    """南方电网：南网.json。数据只在本模块内使用，不并入 QUIZ/VOCAB 等。"""
+    src = HERE / "南网.json"
+    if not src.exists():
+        return []
+    doc = json.loads(src.read_text(encoding="utf-8"))
+    items = doc.get("items", [])
+    # 企业文化那批原文只给了答案字母、没写解析。这里不编解析，只把正确项内容回填成一句说明。
+    let = "ABCD"
+    for it in items:
+        if not (it.get("exp") or "").strip():
+            i = it.get("ans", 0)
+            it["exp"] = f"正确答案 {let[i]}．{it['opts'][i]}　（原卷只给答案，未附解析，按原文表述记住即可。）"
+    return items
+
+
 def load_yanyu() -> list[dict]:
     """言语理解：言语理解.json → 题目列表（选词填空 / 片段阅读 / 语句表达）。"""
     src = HERE / "言语理解.json"
@@ -113,6 +129,9 @@ header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);
 .hstat{text-align:right;font-size:11.5px;color:var(--sub);white-space:nowrap;line-height:1.6}
 .hstat b{font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums}
 .hstat .fav{color:var(--brown)}
+.fstat{display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap;font-size:11.5px;line-height:1.5}
+.fstat span{white-space:nowrap}
+.fstat b{font-size:15px}
 .sync{display:inline-block;margin-top:2px;font-size:10.5px;padding:1px 7px;border-radius:9px;
   border:1px solid var(--line);color:#9ca3af;background:#fafafa;cursor:pointer}
 .sync.ok{color:#15803d;border-color:#bbf7d0;background:#f0fdf4}
@@ -156,7 +175,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
 .prow:hover{background:#fafafa}
 .prow .d{font-size:14.5px;font-weight:600}
 .prow .i{font-size:11.5px;color:var(--sub)}
-.prow .meta{margin-left:auto;font-size:11.5px;color:var(--sub);text-align:right}
+.prow .meta{margin-left:auto;font-size:11.5px;color:var(--sub);text-align:right;white-space:nowrap;flex:0 0 auto}
 .prow .dot{width:7px;height:7px;border-radius:50%;background:#e5e7eb;flex:0 0 auto}
 .prow .dot.done{background:#15803d}
 .prow .dot.part{background:var(--gold)}
@@ -312,6 +331,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
 /* ---------- 数量关系 ---------- */
 .tiles.four{grid-template-columns:repeat(4,1fr)}
 .tiles.five{grid-template-columns:repeat(5,1fr)}
+.tiles.six{grid-template-columns:repeat(2,1fr)}
 .mhero{background:linear-gradient(135deg,#1f2937,#4b5563);color:#fff;border-radius:18px;
   padding:20px 22px 18px;margin-bottom:14px}
 .mhero .mt{font-size:18px;font-weight:700;letter-spacing:.4px}
@@ -339,6 +359,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   .tiles.three{grid-template-columns:1fr}
   .tiles.four{grid-template-columns:1fr 1fr}
   .tiles.five{grid-template-columns:1fr 1fr}
+  .tiles.six{grid-template-columns:1fr 1fr}
   .grid{grid-template-columns:repeat(8,1fr)}
   .vcard .word{font-size:34px;letter-spacing:4px}
   .qtext{font-size:16px}
@@ -353,7 +374,14 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
       <div class="brand">广东省考学习平台<small id="sub">总览</small></div>
       <div class="hstat">
         <div><b id="doneN">0</b> / <span id="totalN">0</span> 已答　正确率 <b id="rate">—</b></div>
-        <div>★ 题 <b class="fav" id="favN">0</b>　词 <b class="fav" id="vfavN">0</b>　点 <b class="fav" id="kfavN">0</b>　数 <b class="fav" id="mfavN">0</b>　言 <b class="fav" id="yfavN">0</b></div>
+        <div class="fstat">
+          <span>★ 题 <b class="fav" id="favN">0</b></span>
+          <span>词 <b class="fav" id="vfavN">0</b></span>
+          <span>点 <b class="fav" id="kfavN">0</b></span>
+          <span>数 <b class="fav" id="mfavN">0</b></span>
+          <span>言 <b class="fav" id="yfavN">0</b></span>
+          <span>南 <b class="fav" id="nfavN">0</b></span>
+        </div>
         <span class="sync" id="sync">连接中…</span>
         <span class="acct" id="acctBtn" style="display:none">登录同步</span>
       </div>
@@ -365,14 +393,15 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
       <button data-go="know">知识点</button>
       <button data-go="math">数量关系</button>
       <button data-go="yanyu">言语理解</button>
+      <button data-go="nanwang">南方电网</button>
     </nav>
 
 <main>
   <!-- 首页 -->
   <section id="v-home">
     <div class="hero">
-      <h1>今天该做的五件事</h1>
-      <p id="heroSub">刷题保持手感，言语理解每天一组，成语补底子，知识点背死该背的，数量关系练速度</p>
+      <h1>今天该做的六件事</h1>
+      <p id="heroSub">刷题保持手感，言语理解每天一组，成语补底子，知识点背死该背的，数量关系练速度，南方电网单独背</p>
       <div class="row">
         <div><div class="k">刷题进度</div><div class="v" id="hDone">0<small> / 0</small></div></div>
         <div><div class="k">正确率</div><div class="v" id="hRate">—</div></div>
@@ -380,10 +409,12 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
         <div><div class="k">成语收藏</div><div class="v" id="hVocab">0<small> 条</small></div></div>
         <div><div class="k">知识点收藏</div><div class="v" id="hKnow">0<small> 条</small></div></div>
         <div><div class="k">言语收藏</div><div class="v" id="hYan">0<small> 道</small></div></div>
+        <div><div class="k">数量收藏</div><div class="v" id="hMath">0<small> 道</small></div></div>
+        <div><div class="k">南网收藏</div><div class="v" id="hNan">0<small> 道</small></div></div>
       </div>
     </div>
 
-    <div class="tiles five">
+    <div class="tiles six">
       <div class="tile" data-go="quiz">
         <div class="t">每日刷题</div>
         <div class="n" id="tQuizDone">0<small> 题已答</small></div>
@@ -413,6 +444,12 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
         <div class="n" id="tYanDone">0<small> 道已做</small></div>
         <div class="bar"><i id="tYanBar" style="width:0%"></i></div>
         <div class="go">刷一组 →</div>
+      </div>
+      <div class="tile" data-go="nanwang">
+        <div class="t">南方电网</div>
+        <div class="n" id="tNanDone">0<small> 道已做</small></div>
+        <div class="bar"><i id="tNanBar" style="width:0%"></i></div>
+        <div class="go">背题／刷题 →</div>
       </div>
     </div>
 
@@ -594,7 +631,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
           <div><div class="k">用时</div><div class="v" id="mUsed">—</div></div>
         </div>
       </div>
-      <div class="sec-title">这一组的错题</div>
+      <div class="sec-title">这一组没做对的题</div>
       <div class="list" id="mWrongList"></div>
       <div class="qnav">
         <button class="btn main" id="mAgain">再来一组</button>
@@ -667,11 +704,114 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
           <div><div class="k">用时</div><div class="v" id="yUsed">—</div></div>
         </div>
       </div>
-      <div class="sec-title">这一组的错题</div>
+      <div class="sec-title">这一组没做对的题</div>
       <div class="list" id="yWrongList"></div>
       <div class="qnav">
         <button class="btn main" id="yAgain">再来一组</button>
         <button class="btn" id="yBack">回到开始页</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 南方电网（资料独立，不与其他模块共用） -->
+  <section id="v-nanwang" style="display:none">
+    <div id="nStart">
+      <div class="mhero">
+        <div class="mt">南方电网 · 笔试专项</div>
+        <div class="ms">管理学、经济学、计算机、马克思主义、法律、公文、企业文化七个科目。<br>背题模式直接看题干／选项／解析，随机刷题按 10 道一组判对错。</div>
+        <div class="mrow">
+          <div><div class="k">题库</div><div class="v"><span id="nPool">0</span><small> 道</small></div></div>
+          <div><div class="k">已做过</div><div class="v"><span id="nDoneN">0</span><small> 道</small></div></div>
+          <div><div class="k">正确率</div><div class="v" id="nRate">—</div></div>
+          <div><div class="k">收藏</div><div class="v"><span id="nFavN">0</span><small> 道</small></div></div>
+        </div>
+        <div class="chips" id="nchips" style="margin-top:12px;padding-bottom:0;flex-wrap:wrap;overflow:visible"></div>
+      </div>
+      <div class="qnav">
+        <button class="btn main" id="nStudyBtn">背题模式</button>
+        <button class="btn" id="nStartBtn">随机刷题（10 道）</button>
+      </div>
+      <div class="qnav">
+        <button class="btn" id="nFavBtn">只看收藏</button>
+        <button class="btn" id="nResetBtn">清空本科记录</button>
+      </div>
+      <div class="sec-title">上一次的成绩</div>
+      <div class="list" id="nLast"></div>
+    </div>
+
+    <!-- 背题 -->
+    <div id="nStudyView" style="display:none">
+      <div class="mbar">
+        <span>第 <b id="nSIdx">1</b> / <span id="nSTot">0</span> 张</span>
+        <span id="nSTag"></span>
+      </div>
+      <div class="qcard">
+        <button class="star" id="nSstar" title="收藏本题（F）">☆</button>
+        <div class="qmeta">
+          <span class="no" id="nSno">第 1 张</span>
+          <span class="sec" id="nScat"></span>
+        </div>
+        <div class="qtext" id="nStext"></div>
+        <div class="opts" id="nSopts"></div>
+        <div class="exp show" id="nSexp">
+          <div class="expline"><span class="lbl">答案</span><span class="val" id="nSans"></span></div>
+          <div class="expline"><span class="lbl">解析</span><span class="val" id="nSexpl"></span></div>
+        </div>
+      </div>
+      <div class="qnav">
+        <button class="btn" id="nSprev">上一张</button>
+        <button class="btn main" id="nSnext">下一张</button>
+      </div>
+      <div class="qnav">
+        <button class="btn" id="nSback">回到开始页</button>
+      </div>
+    </div>
+
+    <!-- 刷题 -->
+    <div id="nRun" style="display:none">
+      <div class="mbar">
+        <span>第 <b id="nIdx">1</b> / <span id="nTot">10</span> 题</span>
+        <span id="nTimer">00:00</span>
+      </div>
+      <div class="mdots" id="ndots"></div>
+      <div class="qcard">
+        <button class="star" id="nstar" title="收藏本题（F）">☆</button>
+        <div class="qmeta">
+          <span class="no" id="nno">第 1 题</span>
+          <span class="sec" id="ntag"></span>
+        </div>
+        <div class="qtext" id="ntext"></div>
+        <div class="opts" id="nopts"></div>
+        <div class="exp" id="nexp">
+          <div class="verdict" id="nverdict"></div>
+          <div class="expline"><span class="lbl">解析</span><span class="val" id="nexpl"></span></div>
+        </div>
+      </div>
+      <div class="qnav">
+        <button class="btn" id="nprev">上一题</button>
+        <button class="btn main" id="nnext">下一题</button>
+      </div>
+      <div class="qnav">
+        <button class="btn" id="nfinish">交卷看成绩</button>
+        <button class="btn" id="nquit">退出本组</button>
+      </div>
+    </div>
+
+    <div id="nDone" style="display:none">
+      <div class="mhero">
+        <div class="mt" id="nScoreT">—</div>
+        <div class="ms" id="nScoreS"></div>
+        <div class="mrow">
+          <div><div class="k">正确</div><div class="v" id="nRight">0</div></div>
+          <div><div class="k">错误</div><div class="v" id="nWrong">0</div></div>
+          <div><div class="k">用时</div><div class="v" id="nUsed">—</div></div>
+        </div>
+      </div>
+      <div class="sec-title">这一组没做对的题</div>
+      <div class="list" id="nWrongList"></div>
+      <div class="qnav">
+        <button class="btn main" id="nAgain">再来一组</button>
+        <button class="btn" id="nBack">回到开始页</button>
       </div>
     </div>
   </section>
@@ -698,7 +838,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   </div>
 </div>
 
-<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系收工程问题 46 道、集合容斥 40 道，言语理解收选词填空 23 道、片段阅读 21 道、语句表达 16 道（每题答案均由程序校验）</p>
+<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系收工程问题 46 道、集合容斥 40 道，言语理解收选词填空 23 道、片段阅读 21 道、语句表达 16 道，南方电网 1046 道取自《南网中公》资料、只在本模块使用（每题答案均由程序校验）</p>
 
 <div class="mask" id="cloudMask">
   <div class="sheet">
@@ -720,6 +860,7 @@ const VOCAB = __VOCAB__;
 const KNOW = __KNOW__;
 const MATH = __MATH__;
 const YANYU = __YANYU__;
+const NANWANG = __NANWANG__;
 const CLOUD = __CLOUD__;
 const PAPERS = QUIZ.papers;
 
@@ -728,11 +869,13 @@ const APIV = 'http://127.0.0.1:8760/api/vocab';
 const APIK = 'http://127.0.0.1:8760/api/know';
 const APIM = 'http://127.0.0.1:8760/api/math';
 const APIY = 'http://127.0.0.1:8760/api/yanyu';
+const APIN = 'http://127.0.0.1:8760/api/nanwang';
 const AKEY = 'gdquiz2-answers', FKEY = 'gdquiz2-favs', UKEY = 'gdquiz2-updated';
 const VFKEY = 'gdvocab-favs', VUKEY = 'gdvocab-updated';
 const KFKEY = 'gdknow-favs', KUKEY = 'gdknow-updated';
 const MSKEY = 'gdmath-stat', MFKEY = 'gdmath-favs', MUKEY = 'gdmath-updated', MLKEY = 'gdmath-last';
 const YSKEY = 'gdyan-stat', YFKEY = 'gdyan-favs', YUKEY = 'gdyan-updated', YLKEY = 'gdyan-last';
+const NSKEY = 'gdnan-stat', NFKEY = 'gdnan-favs', NUKEY = 'gdnan-updated', NLKEY = 'gdnan-last';
 const $ = s => document.querySelector(s);
 
 /* ================= 状态 ================= */
@@ -765,6 +908,14 @@ let yAt = Number(localStorage.getItem(YUKEY) || 0) || 0;
 let yLast = null;
 try { yLast = JSON.parse(localStorage.getItem(YLKEY) || 'null'); } catch(e){ yLast = null; }
 
+let nstat = {};
+try { nstat = JSON.parse(localStorage.getItem(NSKEY) || '{}'); } catch(e){ nstat = {}; }
+let nfavs = {};
+try { nfavs = JSON.parse(localStorage.getItem(NFKEY) || '{}'); } catch(e){ nfavs = {}; }
+let nAt = Number(localStorage.getItem(NUKEY) || 0) || 0;
+let nLast = null;
+try { nLast = JSON.parse(localStorage.getItem(NLKEY) || 'null'); } catch(e){ nLast = null; }
+
 // 迁移旧单期页（gdquiz-<id> / gdquiz-<id>-fav）
 (function(){
   try{
@@ -794,11 +945,11 @@ const IS_LOCAL = (location.hostname === '127.0.0.1' || location.hostname === 'lo
 const SYNC_HOST = 'wbapp-cmvrw789ihbe3hosa43jcr.app.workbuddy.host';
 const PRIMARY_URL = 'https://wbapp-cmvrw789ihbe3hosa43jcr.app.workbuddy.host/?sharecode=XD7NFFZQ3Y';
 const CAN_SYNC = (location.hostname === SYNC_HOST);
-const sync = { q:'idle', v:'idle', k:'idle', m:'idle', y:'idle' };
-const syncMsg = { q:'', v:'', k:'', m:'', y:'' };
+const sync = { q:'idle', v:'idle', k:'idle', m:'idle', y:'idle', n:'idle' };
+const syncMsg = { q:'', v:'', k:'', m:'', y:'', n:'' };
 function setSync(){
   const el = $('#sync');
-  const all = [sync.q, sync.v, sync.k, sync.m, sync.y];
+  const all = [sync.q, sync.v, sync.k, sync.m, sync.y, sync.n];
   const isLocalOnly = (all.every(x => x === 'local')) && cloudState.mode !== 'cloud';
   const bad = all.some(x => x === 'off');
   const okAll = all.every(x => x === 'ok');
@@ -873,6 +1024,16 @@ function saveMath(){
   post(APIM, {answers: mstat, favs: mfavs, updatedAt: mAt}, 'm').catch(() => {});
   cloudTouch();
 }
+function saveNan(){
+  nAt = Date.now();
+  try {
+    localStorage.setItem(NSKEY, JSON.stringify(nstat));
+    localStorage.setItem(NFKEY, JSON.stringify(nfavs));
+    localStorage.setItem(NUKEY, String(nAt));
+  } catch(e){}
+  post(APIN, {answers: nstat, favs: nfavs, updatedAt: nAt}, 'n').catch(() => {});
+  cloudTouch();
+}
 function saveYan(){
   yAt = Date.now();
   try {
@@ -886,7 +1047,7 @@ function saveYan(){
 
 function pullAll(){
   if(!IS_LOCAL){
-    sync.q = sync.v = sync.k = sync.m = sync.y = 'local';
+    sync.q = sync.v = sync.k = sync.m = sync.y = sync.n = 'local';
     setSync();
     renderHome();
     return;
@@ -964,14 +1125,31 @@ function pullAll(){
     }
     setSync(); renderHome();
   }).catch(e => { sync.y = 'off'; syncMsg.y = 'GET yanyu 失败：' + (e && e.name || 'x'); setSync(); });
+
+  getJSON(APIN + '?t=' + Date.now()).then(s => {
+    sync.n = 'ok';
+    const at = Number(s.updatedAt || 0) || 0;
+    if(at > nAt + 500){
+      nstat = s.answers || {}; nfavs = s.favs || {}; nAt = at;
+      try {
+        localStorage.setItem(NSKEY, JSON.stringify(nstat));
+        localStorage.setItem(NFKEY, JSON.stringify(nfavs));
+        localStorage.setItem(NUKEY, String(nAt));
+      } catch(e){}
+      if(state.view === 'nanwang') renderNanHome();
+    } else if(nAt > at && (Object.keys(nstat).length || Object.keys(nfavs).length)){
+      saveNan();
+    }
+    setSync(); renderHome();
+  }).catch(e => { sync.n = 'off'; syncMsg.n = 'GET nanwang 失败：' + (e && e.name || 'x'); setSync(); });
 }
 /* ================= 路由 ================= */
 const state = { view:'home', pid:'', filter:'all', pos:0, list:[],
                 vmode:'card', vfilter:'all', vkw:'', vpos:0, vlist:[], vopen:false,
                 kmode:'card', kfilter:'all', kkw:'', kpos:0, klist:[], khide:false };
 
-const VIEWS = ['home','quiz','vocab','know','math','yanyu'];
-const VIEWNAME = {home:'总览', quiz:'每日刷题', vocab:'成语速记', know:'知识点速记', math:'数量关系', yanyu:'言语理解'};
+const VIEWS = ['home','quiz','vocab','know','math','yanyu','nanwang'];
+const VIEWNAME = {home:'总览', quiz:'每日刷题', vocab:'成语速记', know:'知识点速记', math:'数量关系', yanyu:'言语理解', nanwang:'南方电网'};
 
 function go(view){
   state.view = view;
@@ -986,6 +1164,7 @@ function go(view){
   if(view === 'know'){ buildKnowChips(); buildKnowList(); renderKnow(); }
   if(view === 'math'){ renderMathHome(); renderMathView(); }
   if(view === 'yanyu'){ renderYanHome(); renderYanView(); }
+  if(view === 'nanwang'){ renderNanHome(); renderNanView(); }
 }
 
 document.querySelectorAll('[data-go]').forEach(b => { b.onclick = () => go(b.dataset.go); });
@@ -1169,7 +1348,7 @@ $('#resetAll').onclick = () => {
 $('#expBtn').onclick = () => {
   const pad = n => String(n).padStart(2,'0');
   const d = new Date();
-  const data = { app:'gdquiz', v:5, exportedAt:d.toISOString(), answers, favs, vfavs, kfavs, mstat, mfavs, ystat, yfavs };
+  const data = { app:'gdquiz', v:6, exportedAt:d.toISOString(), answers, favs, vfavs, kfavs, mstat, mfavs, ystat, yfavs, nstat, nfavs };
   const blob = new Blob([JSON.stringify(data, null, 1)], {type:'application/json'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1195,11 +1374,13 @@ $('#impFile').onchange = e => {
       Object.keys(o.mstat || {}).forEach(k => { if(!mstat[k] && o.mstat[k]){ mstat[k] = o.mstat[k]; nk++; } });
       Object.keys(o.yfavs || {}).forEach(k => { if(!yfavs[k] && o.yfavs[k]){ yfavs[k] = 1; nk++; } });
       Object.keys(o.ystat || {}).forEach(k => { if(!ystat[k] && o.ystat[k]){ ystat[k] = o.ystat[k]; nk++; } });
-      saveQuiz(); saveVocab(); saveKnow(); saveMath(); saveYan(); closeSheet();
+      Object.keys(o.nfavs || {}).forEach(k => { if(!nfavs[k] && o.nfavs[k]){ nfavs[k] = 1; nk++; } });
+      Object.keys(o.nstat || {}).forEach(k => { if(!nstat[k] && o.nstat[k]){ nstat[k] = o.nstat[k]; nk++; } });
+      saveQuiz(); saveVocab(); saveKnow(); saveMath(); saveYan(); saveNan(); closeSheet();
       buildQuizList(); renderQuiz(); buildTabs();
       buildVocabChips(); buildVocabList(); renderVocab();
       buildKnowChips(); buildKnowList(); renderKnow();
-      renderMathHome(); renderYanHome(); renderHome();
+      renderMathHome(); renderYanHome(); renderNanHome(); renderHome();
       alert('已恢复：作答 ' + na + ' 题、题目收藏 ' + nf + ' 条、成语收藏 ' + nv + ' 条、知识点/数量关系/言语理解收藏与记录 ' + nk + ' 条。');
     }catch(err){ alert('这个文件读不出来，请选择本平台导出的 json。'); }
     e.target.value = '';
@@ -1646,7 +1827,7 @@ function finishM(){
     const pick = mset.pick[id];
     const q = mById(id);
     if(pick && pick === ['A','B','C','D'][q.ans]) right++;
-    else if(pick) wrongIds.push(id);
+    else wrongIds.push(id);
   });
   const used = Math.round((Date.now() - mset.t0) / 1000);
   mLast = { at: Date.now(), total, right, used, wrongIds, answered: Object.keys(mset.pick).length };
@@ -1672,7 +1853,7 @@ function finishM(){
       const row = document.createElement('div');
       row.className = 'prow';
       row.innerHTML = '<div><div class="d" style="font-size:13.5px;line-height:1.7"></div>' +
-                      '<div class="i">你的答案 ' + mset.pick[id] + '　正确答案 ' + ['A','B','C','D'][q.ans] + '　·　' + q.tag + '</div></div>' +
+                      '<div class="i">' + (mset.pick[id] ? '你的答案 ' + mset.pick[id] : '未作答') + '　正确答案 ' + ['A','B','C','D'][q.ans] + '　·　' + q.tag + '</div></div>' +
                       '<div class="meta">重看 →</div>';
       row.querySelector('.d').textContent = q.t.length > 46 ? q.t.slice(0, 46) + '…' : q.t;
       row.onclick = () => { mset.pos = mset.ids.indexOf(id); mView = 'run'; renderMathView(); renderM(); window.scrollTo({top:0}); };
@@ -1904,7 +2085,7 @@ function finishY(){
     const pick = yset.pick[id];
     const q = yById(id);
     if(pick && pick === YLET[q.ans]) right++;
-    else if(pick) wrongIds.push(id);
+    else wrongIds.push(id);
   });
   const used = Math.round((Date.now() - yset.t0) / 1000);
   yLast = { at: Date.now(), total, right, used, wrongIds, answered: Object.keys(yset.pick).length };
@@ -1933,7 +2114,7 @@ function finishY(){
                       '<div class="i"></div></div><div class="meta">重看 →</div>';
       const d = q.t.replace(/\n/g, ' ');
       row.querySelector('.d').textContent = d.length > 46 ? d.slice(0, 46) + '…' : d;
-      row.querySelector('.i').textContent = '你的答案 ' + yset.pick[id] + '　正确答案 ' + YLET[q.ans] + '　·　' + q.cat + '／' + q.tag;
+      row.querySelector('.i').textContent = (yset.pick[id] ? '你的答案 ' + yset.pick[id] : '未作答') + '　正确答案 ' + YLET[q.ans] + '　·　' + q.cat + '／' + q.tag;
       row.onclick = () => { yset.pos = yset.ids.indexOf(id); yView = 'run'; renderYanView(); renderY(); window.scrollTo({top:0}); };
       box.appendChild(row);
     });
@@ -1996,21 +2177,347 @@ $('#yResetBtn').onclick = () => {
 };
 
 
+/* ================= 南方电网（独立模块） =================
+   题库来自「南网中公」资料，只在本模块内使用，不进每日刷题、成语、知识点、数量关系、言语理解。 */
+const NSET_N = 10;
+let nset = null;            // 刷题：{ids,pos,pick,t0}
+let nView = 'start';        // start | study | run | done
+let nTimerId = 0;
+let nCat = 'all';           // 科目筛选
+let nStudyList = [];        // 背题队列
+let nStudyPos = 0;
+
+const NCATS = Array.from(new Set(NANWANG.map(x => x.cat)));
+const nBase = () => (nCat === 'all' ? NANWANG : NANWANG.filter(x => x.cat === nCat));
+const nById = id => NANWANG.find(x => x.id === id);
+const NLET = ['A','B','C','D'];
+
+function pickNIds(mode){
+  const base = nBase();
+  if(mode === 'fav'){
+    return shuffle(base.filter(x => nfavs[x.id]).map(x => x.id)).slice(0, NSET_N);
+  }
+  const fresh = base.filter(x => !nstat[x.id]).map(x => x.id);
+  const done = base.filter(x => nstat[x.id]).map(x => x.id);
+  let out = shuffle(fresh);
+  if(out.length < NSET_N) out = out.concat(shuffle(done));
+  return out.slice(0, NSET_N);
+}
+
+function buildNanChips(){
+  const box = $('#nchips');
+  if(!box) return;
+  box.innerHTML = '';
+  const rows = [['all', '全部 ' + NANWANG.length]]
+    .concat(NCATS.map(c => [c, c + ' ' + NANWANG.filter(x => x.cat === c).length]));
+  rows.forEach(([c, label]) => {
+    const b = document.createElement('button');
+    b.className = 'chip' + (nCat === c ? ' on' : '');
+    b.textContent = label;
+    b.onclick = () => { nCat = c; renderNanHome(); };
+    box.appendChild(b);
+  });
+}
+
+function renderNanView(){
+  $('#nStart').style.display = nView === 'start' ? '' : 'none';
+  $('#nStudyView').style.display = nView === 'study' ? '' : 'none';
+  $('#nRun').style.display = nView === 'run' ? '' : 'none';
+  $('#nDone').style.display = nView === 'done' ? '' : 'none';
+}
+
+/* ---------- 背题模式 ---------- */
+function startStudy(mode){
+  let list = mode === 'fav'
+    ? nBase().filter(x => nfavs[x.id]).map(x => x.id)
+    : nBase().map(x => x.id);
+  if(!list.length){
+    alert(mode === 'fav' ? '这个范围里还没有收藏的题。' : '题库是空的。');
+    return;
+  }
+  nStudyList = shuffle(list);
+  nStudyPos = 0;
+  nView = 'study';
+  renderNanView();
+  renderStudy();
+  window.scrollTo({top:0});
+}
+
+function renderStudy(){
+  if(!nStudyList.length) return;
+  const id = nStudyList[nStudyPos];
+  const q = nById(id);
+  if(!q) return;
+  $('#nSTot').textContent = nStudyList.length;
+  $('#nSIdx').textContent = nStudyPos + 1;
+  $('#nSno').textContent = '第 ' + (nStudyPos + 1) + ' 张';
+  $('#nScat').textContent = q.cat;
+  $('#nSTag').textContent = q.tag || '';
+  $('#nStext').textContent = q.t;
+
+  const on = !!nfavs[id];
+  $('#nSstar').textContent = on ? '★' : '☆';
+  $('#nSstar').classList.toggle('on', on);
+
+  const box = $('#nSopts');
+  box.innerHTML = '';
+  NLET.forEach((k, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt done' + (i === q.ans ? ' correct' : ' dim');
+    b.innerHTML = '<span class="k"></span><span class="t"></span>';
+    b.querySelector('.k').textContent = k;
+    b.querySelector('.t').textContent = q.opts[i] || '';
+    box.appendChild(b);
+  });
+
+  $('#nSans').textContent = NLET[q.ans] + '．' + (q.opts[q.ans] || '');
+  $('#nSexpl').textContent = q.exp || '（这条没有配解析，记住正确项即可）';
+}
+
+function goStudy(step){
+  if(!nStudyList.length) return;
+  nStudyPos = (nStudyPos + step + nStudyList.length) % nStudyList.length;
+  renderStudy();
+}
+
+/* ---------- 随机刷题 ---------- */
+function startNanSet(mode){
+  const ids = pickNIds(mode);
+  if(!ids.length){
+    const scope = nCat === 'all' ? '' : '「' + nCat + '」里';
+    alert(mode === 'fav' ? scope + '还没有收藏的题。先背几道，点右上角 ☆ 收藏。' : '题库是空的。');
+    return;
+  }
+  nset = { ids, pos: 0, pick: {}, t0: Date.now(), mode };
+  nView = 'run';
+  startNTimer();
+  renderNanView();
+  renderN();
+  window.scrollTo({top:0});
+}
+
+function startNTimer(){
+  clearInterval(nTimerId);
+  const tick = () => {
+    const sec = Math.floor((Date.now() - (nset ? nset.t0 : Date.now())) / 1000);
+    $('#nTimer').textContent = String(Math.floor(sec / 60)).padStart(2, '0') + ':' + String(sec % 60).padStart(2, '0');
+  };
+  tick();
+  nTimerId = setInterval(tick, 1000);
+}
+function stopNTimer(){ clearInterval(nTimerId); nTimerId = 0; }
+
+function buildNDots(){
+  const box = $('#ndots');
+  box.innerHTML = '';
+  if(!nset) return;
+  nset.ids.forEach((id, i) => {
+    const el = document.createElement('i');
+    el.textContent = i + 1;
+    const pick = nset.pick[id];
+    if(pick) el.classList.add(pick === NLET[nById(id).ans] ? 'r' : 'w');
+    if(i === nset.pos) el.classList.add('cur');
+    el.onclick = () => { nset.pos = i; renderN(); };
+    box.appendChild(el);
+  });
+}
+
+function renderN(){
+  if(!nset) return;
+  const id = nset.ids[nset.pos];
+  const q = nById(id);
+  $('#nTot').textContent = nset.ids.length;
+  $('#nIdx').textContent = nset.pos + 1;
+  $('#nno').textContent = '第 ' + (nset.pos + 1) + ' 题';
+  $('#ntag').textContent = q.cat + (q.tag ? '　·　' + q.tag : '');
+  $('#ntext').textContent = q.t;
+
+  const on = !!nfavs[id];
+  $('#nstar').textContent = on ? '★' : '☆';
+  $('#nstar').classList.toggle('on', on);
+
+  const sel = nset.pick[id];
+  const box = $('#nopts');
+  box.innerHTML = '';
+  NLET.forEach((k, i) => {
+    const b = document.createElement('button');
+    b.className = 'opt';
+    b.innerHTML = '<span class="k"></span><span class="t"></span>';
+    b.querySelector('.k').textContent = k;
+    b.querySelector('.t').textContent = q.opts[i] || '';
+    if(sel){
+      b.classList.add('done');
+      if(i === q.ans) b.classList.add('correct');
+      else if(k === sel) b.classList.add('wrong');
+      else b.classList.add('dim');
+    } else {
+      b.onclick = () => chooseN(k);
+    }
+    box.appendChild(b);
+  });
+
+  const exp = $('#nexp');
+  if(sel){
+    exp.classList.add('show');
+    const ok = NLET[q.ans] === sel;
+    const v = $('#nverdict');
+    v.className = 'verdict ' + (ok ? 'ok' : 'bad');
+    v.innerHTML = (ok ? '✓ 回答正确' : '✗ 回答错误') + '<span class="badge">正确答案 ' + NLET[q.ans] + '</span>';
+    $('#nexpl').textContent = q.exp || '（这条没有配解析）';
+  } else {
+    exp.classList.remove('show');
+  }
+  buildNDots();
+}
+
+function chooseN(k){
+  if(!nset) return;
+  const id = nset.ids[nset.pos];
+  if(nset.pick[id]) return;
+  const q = nById(id);
+  nset.pick[id] = k;
+  nstat[id] = (k === NLET[q.ans]) ? 'r' : 'w';
+  saveNan();
+  renderN();
+  renderNanHome();
+  renderHome();
+}
+
+function goN(step){
+  if(!nset) return;
+  nset.pos = (nset.pos + step + nset.ids.length) % nset.ids.length;
+  renderN();
+}
+
+function finishN(){
+  if(!nset) return;
+  stopNTimer();
+  const total = nset.ids.length;
+  let right = 0;
+  const wrongIds = [];
+  nset.ids.forEach(id => {
+    const pick = nset.pick[id];
+    const q = nById(id);
+    if(pick && pick === NLET[q.ans]) right++;
+    else wrongIds.push(id);
+  });
+  const used = Math.round((Date.now() - nset.t0) / 1000);
+  nLast = { at: Date.now(), total, right, used, wrongIds, answered: Object.keys(nset.pick).length };
+  try { localStorage.setItem(NLKEY, JSON.stringify(nLast)); } catch(e){}
+  nView = 'done';
+
+  $('#nScoreT').textContent = '本组 ' + right + ' / ' + total;
+  const rate = Math.round(right / total * 100);
+  $('#nScoreS').textContent = rate >= 80 ? '这个正确率可以，专业部分基本稳了。'
+    : rate >= 60 ? '及格线附近，错的题回背题模式再看一遍解析。'
+    : '先把背题模式过一轮，再来刷题，效果比硬猜好。';
+  $('#nRight').textContent = right;
+  $('#nWrong').textContent = total - right;
+  $('#nUsed').textContent = Math.floor(used / 60) + '分' + (used % 60) + '秒';
+
+  const box = $('#nWrongList');
+  box.innerHTML = '';
+  if(!wrongIds.length){
+    box.innerHTML = '<div class="prow" style="cursor:default"><div class="i">这一组没有错题。</div></div>';
+  } else {
+    wrongIds.forEach(id => {
+      const q = nById(id);
+      const row = document.createElement('div');
+      row.className = 'prow';
+      row.innerHTML = '<div><div class="d" style="font-size:13.5px;line-height:1.7"></div><div class="i"></div></div><div class="meta">重看 →</div>';
+      row.querySelector('.d').textContent = q.t.length > 46 ? q.t.slice(0, 46) + '…' : q.t;
+      row.querySelector('.i').textContent = (nset.pick[id] ? '你的答案 ' + nset.pick[id] : '未作答') + '　正确答案 ' + NLET[q.ans] + '　·　' + q.cat;
+      row.onclick = () => { nset.pos = nset.ids.indexOf(id); nView = 'run'; renderNanView(); renderN(); window.scrollTo({top:0}); };
+      box.appendChild(row);
+    });
+  }
+  renderNanView();
+  renderNanHome();
+  renderHome();
+  window.scrollTo({top:0});
+}
+
+function renderNanHome(){
+  buildNanChips();
+  const base = nBase();
+  const done = base.filter(x => nstat[x.id]).length;
+  let r = 0;
+  base.forEach(x => { if(nstat[x.id] === 'r') r++; });
+  if($('#nPool')) $('#nPool').textContent = base.length;
+  if($('#nDoneN')) $('#nDoneN').textContent = done;
+  if($('#nFavN')) $('#nFavN').textContent = base.filter(x => nfavs[x.id]).length;
+  if($('#nRate')) $('#nRate').textContent = done ? Math.round(r / done * 100) + '%' : '—';
+
+  const box = $('#nLast');
+  if(!box) return;
+  if(!nLast){
+    box.innerHTML = '<div class="prow" style="cursor:default"><div class="i">还没刷过。先用背题模式过一遍，再来刷题。</div></div>';
+  } else {
+    const d = new Date(nLast.at);
+    box.innerHTML = '<div class="prow" style="cursor:default"><div><div class="d">' + nLast.right + ' / ' + nLast.total +
+      '　正确率 ' + Math.round(nLast.right / nLast.total * 100) + '%</div>' +
+      '<div class="i">' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' +
+      String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0') +
+      '　用时 ' + Math.floor(nLast.used / 60) + '分' + (nLast.used % 60) + '秒' +
+      (nLast.wrongIds && nLast.wrongIds.length ? '　错 ' + nLast.wrongIds.length + ' 道' : '') + '</div></div>' +
+      '<div class="meta">' + (nLast.wrongIds && nLast.wrongIds.length ? '回看 →' : '') + '</div></div>';
+    if(nLast.wrongIds && nLast.wrongIds.length){
+      box.querySelector('.prow').onclick = () => {
+        nset = { ids: nLast.wrongIds.slice(), pos: 0, pick: {}, t0: Date.now(), mode: 'review' };
+        nView = 'run'; startNTimer(); renderNanView(); renderN();
+      };
+    }
+  }
+}
+
+$('#nStudyBtn').onclick = () => startStudy('all');
+$('#nStartBtn').onclick = () => startNanSet('random');
+$('#nFavBtn').onclick = () => { if(nCat === 'all' && !Object.keys(nfavs).length) { alert('还没有收藏的题。'); return; } startStudy('fav'); };
+$('#nAgain').onclick = () => startNanSet('random');
+$('#nBack').onclick = () => { nView = 'start'; nset = null; renderNanView(); renderNanHome(); };
+$('#nSback').onclick = () => { nView = 'start'; renderNanView(); renderNanHome(); };
+$('#nSprev').onclick = () => goStudy(-1);
+$('#nSnext').onclick = () => goStudy(1);
+$('#nSstar').onclick = () => {
+  const id = nStudyList[nStudyPos];
+  if(nfavs[id]) delete nfavs[id]; else nfavs[id] = 1;
+  saveNan(); renderStudy(); renderNanHome(); renderHome();
+};
+$('#nprev').onclick = () => goN(-1);
+$('#nnext').onclick = () => goN(1);
+$('#nfinish').onclick = () => finishN();
+$('#nstar').onclick = () => {
+  if(!nset) return;
+  const id = nset.ids[nset.pos];
+  if(nfavs[id]) delete nfavs[id]; else nfavs[id] = 1;
+  saveNan(); renderN(); renderNanHome(); renderHome();
+};
+$('#nquit').onclick = () => {
+  if(nset && Object.keys(nset.pick).length && !confirm('本组还没交卷，退出后不记录成绩（已答的题仍算做过）。确定退出？')) return;
+  stopNTimer(); nset = null; nView = 'start'; renderNanView(); renderNanHome(); renderHome();
+};
+$('#nResetBtn').onclick = () => {
+  if(!confirm('清空南方电网模块的做题记录与收藏？（其他模块不受影响）')) return;
+  nstat = {}; nfavs = {}; nLast = null;
+  try { localStorage.removeItem(NLKEY); } catch(e){}
+  saveNan(); renderNanHome(); renderHome();
+};
+
 /* ================= 云端同步（仅线上） ================= */
 const cloudState = { mode:'local', ready:false, session:null, err:'', busy:false, remoteFilled:false };
 let cloud = null;
 let pushTimer = 0;
 
-const localMaxAt = () => Math.max(qAt || 0, vAt || 0, kAt || 0, mAt || 0, yAt || 0);
+const localMaxAt = () => Math.max(qAt || 0, vAt || 0, kAt || 0, mAt || 0, yAt || 0, nAt || 0);
 
 // 空态判断：换设备登录时最怕拿一张空表把云端冲掉，所以空的一律不算"更新"
 const isBlank = o => !o || Object.keys(o).length === 0;
 const localEmpty = () => isBlank(answers) && isBlank(favs) && isBlank(vfavs)
   && isBlank(kfavs) && isBlank(mstat) && isBlank(mfavs)
-  && isBlank(ystat) && isBlank(yfavs);
+  && isBlank(ystat) && isBlank(yfavs) && isBlank(nstat) && isBlank(nfavs);
 const payloadEmpty = p => !p || (isBlank(p.answers) && isBlank(p.favs) && isBlank(p.vfavs)
   && isBlank(p.kfavs) && isBlank(p.mstat) && isBlank(p.mfavs)
-  && isBlank(p.ystat) && isBlank(p.yfavs));
+  && isBlank(p.ystat) && isBlank(p.yfavs) && isBlank(p.nstat) && isBlank(p.nfavs));
 
 function cloudInit(){
   if(!CLOUD || IS_LOCAL || !window.WorkBuddyCloud){
@@ -2076,8 +2583,9 @@ function applyPayload(p){
   vfavs = p.vfavs || {}; kfavs = p.kfavs || {};
   mstat = p.mstat || {}; mfavs = p.mfavs || {};
   ystat = p.ystat || {}; yfavs = p.yfavs || {};
+  nstat = p.nstat || {}; nfavs = p.nfavs || {};
   const at = Number(p.updatedAt || 0) || Date.now();
-  qAt = vAt = kAt = mAt = yAt = at;
+  qAt = vAt = kAt = mAt = yAt = nAt = at;
   try{
     localStorage.setItem(AKEY, JSON.stringify(answers));
     localStorage.setItem(FKEY, JSON.stringify(favs));
@@ -2092,11 +2600,14 @@ function applyPayload(p){
     localStorage.setItem(YSKEY, JSON.stringify(ystat));
     localStorage.setItem(YFKEY, JSON.stringify(yfavs));
     localStorage.setItem(YUKEY, String(yAt));
+    localStorage.setItem(NSKEY, JSON.stringify(nstat));
+    localStorage.setItem(NFKEY, JSON.stringify(nfavs));
+    localStorage.setItem(NUKEY, String(nAt));
   }catch(e){}
   buildQuizList(); buildTabs && buildTabs(); renderQuiz && renderQuiz();
   buildVocabChips(); buildVocabList(); renderVocab();
   buildKnowChips(); buildKnowList(); renderKnow();
-  renderMathHome(); renderYanHome && renderYanHome(); renderHome();
+  renderMathHome(); renderYanHome && renderYanHome(); renderNanHome && renderNanHome(); renderHome();
 }
 
 async function cloudPull(){
@@ -2136,7 +2647,7 @@ async function cloudPush(){
   if(!cloud || !cloudState.session) return;
   // 本机一片空白而云端有货：多半是新设备刚登录，别把云端冲掉
   if(localEmpty() && cloudState.remoteFilled) return;
-  const payload = { answers, favs, vfavs, kfavs, mstat, mfavs, ystat, yfavs, updatedAt: Date.now() };
+  const payload = { answers, favs, vfavs, kfavs, mstat, mfavs, ystat, yfavs, nstat, nfavs, updatedAt: Date.now() };
   const name = (cloudState.session.user && cloudState.session.user.name) || null;
   try{
     const { error } = await cloud.database.from('study_state').upsert(
@@ -2289,6 +2800,9 @@ function renderHome(){
   const yf = Object.keys(yfavs).length;
   const yDone = YANYU.filter(x => ystat[x.id]).length;
   if($('#yfavN')) $('#yfavN').textContent = yf;
+  if($('#nfavN')) $('#nfavN').textContent = Object.keys(nfavs).length;
+  const nDone = NANWANG.filter(x => nstat[x.id]).length;
+  if($('#nFavTop')) $('#nFavTop').textContent = Object.keys(nfavs).length;
 
   $('#hDone').innerHTML = s.done + '<small> / ' + s.total + '</small>';
   $('#hRate').textContent = s.rate === null ? '—' : s.rate + '%';
@@ -2305,8 +2819,12 @@ function renderHome(){
   $('#tMathDone').innerHTML = mDone + '<small> 道已做</small>';
   $('#tMathBar').style.width = (mDone / (MATH.length || 1) * 100).toFixed(1) + '%';
   if($('#hYan')) $('#hYan').innerHTML = yf + '<small> 道</small>';
+  if($('#hMath')) $('#hMath').innerHTML = mf + '<small> 道</small>';
+  if($('#hNan')) $('#hNan').innerHTML = Object.keys(nfavs).length + '<small> 道</small>';
   if($('#tYanDone')) $('#tYanDone').innerHTML = yDone + '<small> 道已做</small>';
   if($('#tYanBar')) $('#tYanBar').style.width = (yDone / (YANYU.length || 1) * 100).toFixed(1) + '%';
+  if($('#tNanDone')) $('#tNanDone').innerHTML = nDone + '<small> 道已做</small>';
+  if($('#tNanBar')) $('#tNanBar').style.width = (nDone / (NANWANG.length || 1) * 100).toFixed(1) + '%';
 
   const box = $('#paperList');
   box.innerHTML = '';
@@ -2391,6 +2909,17 @@ document.addEventListener('keydown', e => {
     else if(e.key === 'ArrowLeft') goY(-1);
     else if(e.key === 'ArrowRight') goY(1);
     else if(k === 'F'){ const id = yset.ids[yset.pos]; if(yfavs[id]) delete yfavs[id]; else yfavs[id] = 1; saveYan(); renderY(); renderHome(); }
+  } else if(state.view === 'nanwang' && nView === 'study'){
+    if(e.key === 'ArrowLeft') goStudy(-1);
+    else if(e.key === 'ArrowRight') goStudy(1);
+    else if(e.key === 'F' || e.key === 'f'){ const id = nStudyList[nStudyPos]; if(nfavs[id]) delete nfavs[id]; else nfavs[id] = 1; saveNan(); renderStudy(); renderHome(); }
+  } else if(state.view === 'nanwang' && nView === 'run' && nset){
+    const k = e.key.toUpperCase();
+    if(['1','2','3','4'].includes(k)) chooseN(['A','B','C','D'][+k - 1]);
+    else if(['A','B','C','D'].includes(k)) chooseN(k);
+    else if(e.key === 'ArrowLeft') goN(-1);
+    else if(e.key === 'ArrowRight') goN(1);
+    else if(k === 'F'){ const id = nset.ids[nset.pos]; if(nfavs[id]) delete nfavs[id]; else nfavs[id] = 1; saveNan(); renderN(); renderHome(); }
   }
 });
 
@@ -2437,6 +2966,7 @@ def main() -> None:
     know = load_know()
     math = load_math()
     yanyu = load_yanyu()
+    nanwang = load_nanwang()
     cloud = load_cloud()
     html = (TEMPLATE
             .replace("__QUIZ__", json.dumps(quiz, ensure_ascii=False, separators=(",", ":")))
@@ -2444,6 +2974,7 @@ def main() -> None:
             .replace("__KNOW__", json.dumps(know, ensure_ascii=False, separators=(",", ":")))
             .replace("__MATH__", json.dumps(math, ensure_ascii=False, separators=(",", ":")))
             .replace("__YANYU__", json.dumps(yanyu, ensure_ascii=False, separators=(",", ":")))
+            .replace("__NANWANG__", json.dumps(nanwang, ensure_ascii=False, separators=(",", ":")))
             .replace("__CLOUD_SDK__", load_cloud_sdk())
             .replace("__CLOUD__", json.dumps(cloud or None, ensure_ascii=False, separators=(",", ":"))))
     OUT.write_text(html, encoding="utf-8")
@@ -2465,7 +2996,7 @@ def main() -> None:
 
     total = sum(len(p["questions"]) for p in quiz["papers"])
     print(f"OK  {len(quiz['papers'])} 期 / {total} 题 + {len(vocab)} 条成语 + {len(know)} 条知识点 "
-          f"+ {len(math)} 道数量关系 + {len(yanyu)} 道言语理解 -> {OUT}")
+          f"+ {len(math)} 道数量关系 + {len(yanyu)} 道言语理解 + {len(nanwang)} 道南方电网 -> {OUT}")
 
 
 if __name__ == "__main__":

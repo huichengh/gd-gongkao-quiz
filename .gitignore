@@ -23,3 +23,7 @@ _build/
 probe*.py
 dom_dump.html
 edge_err.txt
+
+# 忽略：无头验证的截图与临时浏览器数据
+_shots/
+_cdp_*/
