@@ -183,6 +183,9 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
 /* ---------- 通用 ---------- */
 .chips{display:flex;gap:6px;overflow-x:auto;padding:2px 0 12px;scrollbar-width:none}
 .chips::-webkit-scrollbar{display:none}
+.kver{display:flex;gap:6px;align-items:center;flex-wrap:wrap;font-size:12px;color:#8b93a1;margin:0 0 8px}
+.kver b{color:#374151;font-weight:600}
+.kver a{color:#2563eb;text-decoration:none;border-bottom:1px dashed #93b4f5}
 .chip{flex:0 0 auto;border:1px solid var(--line);background:#fff;color:var(--sub);
   padding:5px 11px;border-radius:999px;font-size:12.5px;cursor:pointer;white-space:nowrap}
 .chip.on{background:var(--ink);color:#fff;border-color:var(--ink)}
@@ -538,6 +541,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
         <button id="khide">遮盖自测</button>
       </div>
     </div>
+    <div class="kver">共 <b id="kverN">—</b> 张 · <b id="kverC">—</b> 类　<a href="javascript:;" onclick="hardReload()">刷新到最新</a></div>
     <div class="chips" id="kchips" style="flex-wrap:wrap;overflow:visible"></div>
 
     <div id="kCardView">
@@ -1498,6 +1502,18 @@ $('#vq').oninput = e => { state.vkw = e.target.value.trim(); state.vpos = 0; bui
 const KCAT = [];
 KNOW.forEach(k => { if(!KCAT.some(c => c.id === k.cat)) KCAT.push({id:k.cat, name:k.cname}); });
 
+// 手机上最容易卡在旧缓存。给一个显式入口：换一个新的查询参数重新拉，
+// 主站的 sharecode 走查询参数，替换 v 时必须保留其余参数，否则会 403。
+function hardReload(){
+  try{
+    const u = new URL(location.href);
+    u.searchParams.set('v', String(Date.now()));
+    location.replace(u.toString());
+  }catch(e){
+    location.reload();
+  }
+}
+
 function buildKnowList(){
   const kw = state.kkw.toLowerCase();
   state.klist = KNOW.filter(it => {
@@ -1514,6 +1530,9 @@ function buildKnowList(){
 
 function buildKnowChips(){
   const box = $('#kchips');
+  const vn = $('#kverN'), vc = $('#kverC');
+  if(vn) vn.textContent = KNOW.length;
+  if(vc) vc.textContent = KCAT.length;
   box.innerHTML = '';
   const rows = [['all','全部 ' + KNOW.length], ['fav','★ 收藏 ' + Object.keys(kfavs).length]]
     .concat(KCAT.map(c => [c.id, c.name + ' ' + KNOW.filter(k => k.cat === c.id).length]));
