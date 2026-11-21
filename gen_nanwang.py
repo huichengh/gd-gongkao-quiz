@@ -58,6 +58,21 @@ def page_lines(path: Path) -> list[str]:
 
 CHAP = re.compile(r"^第[一二三四五六七八九十百]+\s*[章节]")
 
+# 节内的二级标题：「一、单选题」「【课堂小练】」「综合练习」。
+# 讲义把知识点和课后练习混排，题号在每一层子标题下都从 1 重新开始，
+# 所以必须带着子标题当分组键，否则题号序列里全是重复数字，对齐必然错。
+SUB = re.compile(
+    r"^([一二三四五六七八九十]+)\s*、\s*(单选题|多选题|判断题|不定项选择题|单选题型)?$"
+    r"|^【[^】]{2,12}】$"
+    r"|^(综合练习|课后练习|课堂小练|真题演练|同步练习|实战演练|随堂练习)$"
+    r"|^(单选题|多选题|判断题|不定项选择题)\s*[：:]$"
+    r"|^模块\s*[^\s].{0,18}$"
+)
+
+
+def is_sub(s: str) -> bool:
+    return 3 <= len(s) <= 20 and bool(SUB.match(s))
+
 # 分节标题 → 科目。2024 那一批卷子按「计算机基础 / 法学综合知识 / 通信部分」这类小节切，
 # 用它把同一份卷子里的题分到不同科目上；认不出来的归到该卷的默认科目。
 SECTION_CAT = {
@@ -102,11 +117,13 @@ def parse_questions(path: Path) -> list[dict]:
     """
     lines = page_lines(path)
     n = len(lines)
-    qs, head, idx, sect = [], "", 0, ""
+    qs, head, idx, sect, sub = [], "", 0, "", ""
     while idx < n:
         s = lines[idx]
         if is_chapter(s):
-            head = s
+            head, sub = s, ""
+        elif is_sub(s):
+            sub = s
         if s in SECTION_CAT:
             sect = SECTION_CAT[s]
         if not OP_A.match(s):
@@ -143,8 +160,8 @@ def parse_questions(path: Path) -> list[dict]:
                 break
             k -= 1
         if stem:
-            qs.append({"head": head, "sect": sect, "num": num, "stem": stem, "opts": [
-                ("ABCD"[i], v) for i, v in enumerate(opts)]})
+            qs.append({"head": head, "sub": sub, "sect": sect, "num": num, "stem": stem,
+                       "opts": [("ABCD"[i], v) for i, v in enumerate(opts)]})
         idx = j
     return qs
 
@@ -152,7 +169,7 @@ def parse_questions(path: Path) -> list[dict]:
 def parse_answers(path: Path) -> list[dict]:
     """答案侧：抽题号 + 答案 + 解析。"""
     lines = page_lines(path)
-    out, head, i = [], "", 0
+    out, head, i, sub = [], "", 0, ""
     while i < len(lines):
         s = lines[i]
         m = ANS_A.match(s) or ANS_A2.match(s)
@@ -163,19 +180,21 @@ def parse_answers(path: Path) -> list[dict]:
             j = i + 1
             while j < len(lines):
                 t = lines[j]
-                if ANS_A.match(t) or ANS_A2.match(t) or NUM_A.match(t) or is_heading(t):
+                if (ANS_A.match(t) or ANS_A2.match(t) or NUM_A.match(t)
+                        or is_heading(t) or is_sub(t)):
                     break
                 body.append(t)
                 j += 1
             exp = "".join(body).strip()
             exp = re.sub(r"^解析[：:]\s*", "", exp)
-            out.append({"head": head, "num": num, "ans": letter[0], "multi": multi,
-                        "exp": exp})
+            out.append({"head": head, "sub": sub, "num": num, "ans": letter[0],
+                        "multi": multi, "exp": exp})
             i = j
             continue
-        if is_heading(s):
-            if is_chapter(s):
-                head = s
+        if is_chapter(s):
+            head, sub = s, ""
+        elif is_sub(s):
+            sub = s
         i += 1
     return out
 
@@ -190,6 +209,100 @@ def lcs_pair(qs: list[dict], ans: list[dict]) -> list[tuple[dict, dict]]:
             for k in range(i2 - i1):
                 hit.append((qs[i1 + k], ans[j1 + k]))
     return hit
+
+
+def _zip_nums(A: list[dict], B: list[dict]) -> list[tuple[dict, dict]]:
+    """组内按题号序列对齐，缺号自动跳过。"""
+    sm = SequenceMatcher(None, [x["num"] for x in A], [x["num"] for x in B],
+                         autojunk=False)
+    out = []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag == "equal":
+            for k in range(i2 - i1):
+                out.append((A[i1 + k], B[j1 + k]))
+    return out
+
+
+def _segments(items: list[dict]) -> list[list[dict]]:
+    """按「题号回到 1」切段。没有章节标题的资料，题号序列就是一串这样的段。"""
+    segs, cur = [], []
+    for it in items:
+        if it["num"] == 1 and cur:
+            segs.append(cur)
+            cur = [it]
+        else:
+            cur.append(it)
+    if cur:
+        segs.append(cur)
+    return segs
+
+
+def seg_pair(qs: list[dict], ans: list[dict]) -> list[tuple[dict, dict]]:
+    """两侧都没有章节标题时的兜底：按段长序列对齐，再段内逐条配对。
+
+    题号重复的题库（1—25、1—5、1—30…）不能直接按题号对齐，但「每段多长」
+    这个序列是单调的，用 LCS 对齐段长就能跳掉某一侧多出来的小段。
+    """
+    sg_q, sg_a = _segments(qs), _segments(ans)
+    sm = SequenceMatcher(None, [len(s) for s in sg_q], [len(s) for s in sg_a],
+                         autojunk=False)
+    out = []
+    for tag, i1, i2, j1, j2 in sm.get_opcodes():
+        if tag != "equal":
+            continue
+        for k in range(i2 - i1):
+            A, B = sg_q[i1 + k], sg_a[j1 + k]
+            for t in range(min(len(A), len(B))):
+                out.append((A[t], B[t]))
+    return out
+
+
+def section_pair(qs: list[dict], ans: list[dict]) -> list[tuple[dict, dict]]:
+    """按「节 + 子标题」分组后再按题号对齐。
+
+    这是修 2026-11-21「题目与解析对不上」的关键：原先是全篇拉一条题号序列
+    做 LCS，但讲义里题号在每一层子标题下都从 1 重来，序列里全是重复数字，
+    LCS 会挑中错误的那一段，导致整节解析串到下几题上。
+    """
+    kq, ka = {}, {}
+    for q in qs:
+        kq.setdefault((q["head"], q["sub"]), []).append(q)
+    for a in ans:
+        ka.setdefault((a["head"], a["sub"]), []).append(a)
+
+    pairs = []
+    for key, A in kq.items():
+        B = ka.get(key)
+        if not B:
+            continue
+        if not key[0] and not key[1]:
+            # 这一份资料没有任何章节标题，题号还重复，只能按段长对齐
+            pairs.extend(seg_pair(A, B))
+        else:
+            pairs.extend(_zip_nums(A, B))
+
+    # 有子标题的那边对不上时（例如答案 PDF 没有小标题），退回到只按节分组
+    got = {id(q) for q, _ in pairs}
+    left_q = [q for q in qs if id(q) not in got]
+    if left_q:
+        used = {id(a) for _, a in pairs}
+        left_a = [a for a in ans if id(a) not in used]
+        hq, ha = {}, {}
+        for q in left_q:
+            hq.setdefault(q["head"], []).append(q)
+        for a in left_a:
+            ha.setdefault(a["head"], []).append(a)
+        for head, A in hq.items():
+            if head in ha:
+                pairs.extend(_zip_nums(A, ha[head]))
+
+    # 兜底阶梯：段长对齐 → 全篇题号对齐。既有「题号重复又没标题」的题库，
+    # 也有「只有十来道题、两边都从 1 开始」的小讲义，逐级退。
+    if not pairs:
+        pairs = seg_pair(qs, ans)
+    if not pairs:
+        pairs = lcs_pair(qs, ans)
+    return pairs
 
 
 # ---------------------------------------------------------------- 质量闸门
@@ -219,12 +332,16 @@ def build(cat: str, tag: str, qf: Path, af: Path | None) -> list[dict]:
     if not af.exists():
         return []
     ans = parse_answers(af)
-    pairs = lcs_pair(qs, ans)
+    pairs = section_pair(qs, ans)
     items = []
     for q, a in pairs:
         if a.get("multi"):
             continue
         if not ok(q, a):
+            continue
+        # 判断题的解析串到单选题上：讲义把判断题排在别的位置，答案 PDF 按自己的
+        # 顺序编号，这种错位从数据上修不了，宁可丢掉也不给错的解析。
+        if re.search(r"本题(判断|说法)(正确|错误)", a["exp"]) and "判断" not in q["stem"]:
             continue
         stem = re.sub(r"^[（(]\s*(单选|多选|判断|不定项)[^）)]*[）)]\s*", "", q["stem"].strip())
         items.append({
