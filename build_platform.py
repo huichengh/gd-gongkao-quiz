@@ -838,7 +838,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   </div>
 </div>
 
-<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系收工程问题 46 道、集合容斥 40 道，言语理解收选词填空 23 道、片段阅读 21 道、语句表达 16 道，南方电网 2552 道取自《南网中公》资料、只在本模块使用（每题答案均由程序校验）</p>
+<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系收工程问题 46 道、集合容斥 40 道，言语理解收选词填空 23 道、片段阅读 21 道、语句表达 16 道，南方电网 2552 道取自《南网中公》资料、只在本模块使用（每题答案均由程序校验）<br><span id="buildVer" style="color:#b6bcc6">__VER__</span></p>
 
 <div class="mask" id="cloudMask">
   <div class="sheet">
@@ -2968,8 +2968,16 @@ def main() -> None:
     yanyu = load_yanyu()
     nanwang = load_nanwang()
     cloud = load_cloud()
+    # 版本行只由内容决定，不写构建时间：时间每次不同会让线上 md5 永远对不上，
+    # 每次发布都被误判成「还是旧版」。内容变了它才变，正好当新旧判据用。
+    n_paper = len(quiz["papers"])
+    n_quiz = sum(len(p["questions"]) for p in quiz["papers"])
+    n_kcat = len({k["cat"] for k in know})
+    ver = (f"题库 {n_paper} 期 {n_quiz} 题 · 成语 {len(vocab)} 条 · 知识点 {len(know)} 张（{n_kcat} 类）"
+           f" · 数量关系 {len(math)} 道 · 言语理解 {len(yanyu)} 道 · 南方电网 {len(nanwang)} 道")
     html = (TEMPLATE
             .replace("__QUIZ__", json.dumps(quiz, ensure_ascii=False, separators=(",", ":")))
+            .replace("__VER__", ver)
             .replace("__VOCAB__", json.dumps(vocab, ensure_ascii=False, separators=(",", ":")))
             .replace("__KNOW__", json.dumps(know, ensure_ascii=False, separators=(",", ":")))
             .replace("__MATH__", json.dumps(math, ensure_ascii=False, separators=(",", ":")))
