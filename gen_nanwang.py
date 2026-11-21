@@ -146,15 +146,21 @@ def parse_questions(path: Path) -> list[dict]:
         if len(opts) < 4:
             idx += 1
             continue
-        # 回溯：最近的题号行即题干
+        # 回溯：最近的题号行即题干。
+        # 题干经常折行（「…反映了管」/「理的那一个职能？（　）」），只取题号行
+        # 会把后半句丢掉，所以要把题号行到选项行之间的内容全拼进来。
         num, stem, k = 0, "", idx - 1
         while k >= 0:
             m = NUM_A.match(lines[k])
             if m:
-                num, stem = int(m.group(1)), m.group(2).strip()
-                if not stem or stem in TYPE_ONLY:
-                    # 有的排版把题号单独占一行（"1．"），或写成「1.单选题」，题干在后面几行
-                    stem = "".join(lines[k + 1:idx]).strip()
+                num = int(m.group(1))
+                first = m.group(2).strip()
+                tail = [lines[x].strip() for x in range(k + 1, idx)
+                        if not is_heading(lines[x])]
+                if not first or first in TYPE_ONLY:
+                    stem = "".join(tail).strip()
+                else:
+                    stem = "".join([first] + tail).strip()
                 break
             if is_heading(lines[k]):
                 break
@@ -309,9 +315,10 @@ def section_pair(qs: list[dict], ans: list[dict]) -> list[tuple[dict, dict]]:
 def ok(q: dict, a: dict) -> bool:
     stem = q["stem"].strip()
     opts = [o[1].strip() for o in q["opts"]]
-    if not (6 <= len(stem) <= 160):
+    # 材料题题干可以很长（地理国情那本题库有一大段材料），上限放到 400
+    if not (6 <= len(stem) <= 400):
         return False
-    if any(len(o) < 1 or len(o) > 70 for o in opts):
+    if any(len(o) < 1 or len(o) > 90 for o in opts):
         return False
     if len(set(opts)) != 4:
         return False
@@ -437,6 +444,28 @@ DROP_CATS = {"通信", "电气", "行测"}
 DROP_JOB = ("·电气类", "·信息通信类")     # 这两个岗位卷的专业题，随上面三类一起去掉
 
 
+PUA = re.compile(r"[\ue000-\uf8ff]")
+
+
+def clean_pua(s: str) -> str:
+    """去掉 PDF 里公式字体带出来的私有区字符。
+
+    有的只是行尾残渣（「通过产权界定的方法」后面粘一个），去掉不影响阅读；
+    有的是把 =、+、√ 整个丢了（「AX  只有零解」），这种题留着也不能做。
+    """
+    return PUA.sub("", s).strip()
+
+
+def ruined(it: dict) -> bool:
+    """私有区字符落在字符串中间 —— 公式符号丢了，题不可解。"""
+    for s in [it["t"]] + list(it["opts"]) + [it["exp"]]:
+        for m in PUA.finditer(s):
+            # 只剩行尾残渣的放行
+            if m.start() < len(s) - 1:
+                return True
+    return False
+
+
 def keep_item(it: dict) -> bool:
     """剔除电气 / 通信 / 行测。
 
@@ -514,6 +543,17 @@ def main() -> None:
     before = len(allitems)
     allitems = [it for it in allitems if keep_item(it)]
     print(f"\n  剔除通信/电气/行测：{before} → {len(allitems)}")
+
+    # 多选题混进单选库里没法判分；公式乱码的题没法做 —— 一并去掉
+    for it in allitems:
+        it["t"] = clean_pua(it["t"])
+        it["opts"] = [clean_pua(o) for o in it["opts"]]
+        it["exp"] = clean_pua(it["exp"])
+    n0 = len(allitems)
+    allitems = [it for it in allitems
+                if not ruined(it) and "多选" not in it["t"] and "多选" not in it["tag"]]
+    if n0 != len(allitems):
+        print(f"  剔除多选题/公式乱码：{n0} → {len(allitems)}")
 
     # 去重：题干前 24 字相同视为重复
     seen, uniq = set(), []
