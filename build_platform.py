@@ -538,7 +538,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
         <button id="khide">遮盖自测</button>
       </div>
     </div>
-    <div class="chips" id="kchips"></div>
+    <div class="chips" id="kchips" style="flex-wrap:wrap;overflow:visible"></div>
 
     <div id="kCardView">
       <div class="kcard" id="kcard">
