@@ -68,7 +68,7 @@ def load_know() -> list[dict]:
 
 
 def load_math() -> list[dict]:
-    """数量关系：数量关系.json → 题目列表（工程问题 + 集合容斥）。"""
+    """数量关系：数量关系.json → 题目列表（13 个题型）。"""
     src = HERE / "数量关系.json"
     if not src.exists():
         return []
@@ -576,14 +576,14 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
     <div id="mStart">
       <div class="mhero">
         <div class="mt">数量关系 · 一组 10 道</div>
-        <div class="ms">工程问题与集合容斥两个题型，可以挑一个专项练，也可以混合抽题。<br>选完立刻判对错、看解析，交卷出成绩；题库优先出你没做过的题。</div>
+        <div class="ms">13 个题型：工程、集合容斥、数字推理、和差倍比、行程、经济利润、排列组合与概率、几何、年龄、浓度、周期与日期、最值、牛吃草。<br>可以挑一个专项练，也可以混合抽题；选完立刻判对错、看解析，交卷出成绩；题库优先出你没做过的题。</div>
         <div class="mrow">
           <div><div class="k">题库</div><div class="v"><span id="mPool">0</span><small> 道</small></div></div>
           <div><div class="k">已做过</div><div class="v"><span id="mDoneN">0</span><small> 道</small></div></div>
           <div><div class="k">正确率</div><div class="v" id="mRate">—</div></div>
           <div><div class="k">收藏</div><div class="v"><span id="mFavN">0</span><small> 道</small></div></div>
         </div>
-        <div class="chips" id="mchips" style="margin-top:12px;padding-bottom:0"></div>
+        <div class="chips" id="mchips" style="margin-top:12px;padding-bottom:0;flex-wrap:wrap;overflow:visible"></div>
       </div>
       <div class="qnav">
         <button class="btn main" id="mStartBtn">开始一组（10 道）</button>
@@ -656,7 +656,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
           <div><div class="k">正确率</div><div class="v" id="yRate">—</div></div>
           <div><div class="k">收藏</div><div class="v"><span id="yFavN">0</span><small> 道</small></div></div>
         </div>
-        <div class="chips" id="ychips" style="margin-top:12px;padding-bottom:0"></div>
+        <div class="chips" id="ychips" style="margin-top:12px;padding-bottom:0;flex-wrap:wrap;overflow:visible"></div>
       </div>
       <div class="qnav">
         <button class="btn main" id="yStartBtn">开始一组（10 道）</button>
@@ -842,7 +842,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   </div>
 </div>
 
-<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系收工程问题 46 道、集合容斥 40 道，言语理解收选词填空 23 道、片段阅读 21 道、语句表达 16 道，南方电网 2552 道取自《南网中公》资料、只在本模块使用（每题答案均由程序校验）<br><span id="buildVer" style="color:#b6bcc6">__VER__</span></p>
+<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系按题型编排，覆盖工程、行程、利润、排列组合、几何等 13 类（广东省考固定考 5 道数字推理 + 10 道数学运算），言语理解收选词填空 23 道、片段阅读 21 道、语句表达 16 道，南方电网 2552 道取自《南网中公》资料、只在本模块使用（每题答案均由程序校验）<br><span id="buildVer" style="color:#b6bcc6">__VER__</span></p>
 
 <div class="mask" id="cloudMask">
   <div class="sheet">

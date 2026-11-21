@@ -16,6 +16,10 @@ from fractions import Fraction as F
 from pathlib import Path
 
 from gen_rcc import build_items as build_rcc
+from gen_math2_seq import build_items as build_seq
+from gen_math2_word import build_items as build_word
+from gen_math2_comb import build_items as build_comb
+from gen_math2_basic import build_items as build_basic
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "数量关系.json"
@@ -322,9 +326,16 @@ def main() -> None:
     balance(rcc)
     items.extend(rcc)
 
-    doc = {"updated": "2026-11-18", "topic": "工程问题 / 集合容斥", "items": items}
+    # 第二批：数字推理 + 和差倍比 / 行程 / 利润 / 排列组合概率 / 几何 / 年龄 / 浓度 / 周期 / 最值 / 牛吃草
+    more = (build_seq() + build_word() + build_comb() + build_basic())
+    balance(more)
+    items.extend(more)
+
+    doc = {"updated": "2026-11-21",
+           "topic": "工程问题 / 集合容斥 / 数字推理 / 和差倍比 / 行程 / 经济利润 / 排列组合与概率 / 几何 / 年龄 / 浓度 / 周期与日期 / 最值 / 牛吃草",
+           "items": items}
     OUT.write_text(json.dumps(doc, ensure_ascii=False, indent=1), encoding="utf-8")
-    print(f"OK  {len(items)} 道（工程 {len(items) - len(rcc)} + 容斥 {len(rcc)}）-> {OUT}")
+    print(f"OK  {len(items)} 道（工程 {len(items) - len(rcc) - len(more)} + 容斥 {len(rcc)} + 新增 {len(more)}）-> {OUT}")
 
 
 if __name__ == "__main__":
