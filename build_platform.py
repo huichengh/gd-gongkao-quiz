@@ -76,6 +76,15 @@ def load_math() -> list[dict]:
     return doc.get("items", [])
 
 
+def load_sci() -> list[dict]:
+    """科学推理：科学推理.json → 题目列表（物理/化学/生物/地理）。"""
+    src = HERE / "科学推理.json"
+    if not src.exists():
+        return []
+    doc = json.loads(src.read_text(encoding="utf-8"))
+    return doc.get("items", [])
+
+
 def load_nanwang() -> list[dict]:
     """南方电网：南网.json。数据只在本模块内使用，不并入 QUIZ/VOCAB 等。"""
     src = HERE / "南网.json"
@@ -139,10 +148,10 @@ header{position:sticky;top:0;z-index:30;background:rgba(255,255,255,.95);
 .acct{display:inline-block;margin-top:2px;margin-left:4px;font-size:10.5px;padding:1px 8px;
   border-radius:9px;border:1px solid #c7d2fe;color:#4338ca;background:#eef2ff;cursor:pointer;font-weight:600}
 
-nav{display:flex;gap:4px;padding-bottom:9px;overflow-x:auto;scrollbar-width:none}
+nav{display:flex;gap:4px;padding-bottom:9px;flex-wrap:wrap;overflow:visible}
 nav::-webkit-scrollbar{display:none}
 nav button{flex:0 0 auto;border:1px solid transparent;background:transparent;color:var(--sub);
-  padding:6px 14px;border-radius:9px;font-size:13.5px;cursor:pointer;font-weight:500}
+  padding:6px 12px;border-radius:9px;font-size:13.5px;cursor:pointer;font-weight:500}
 nav button.on{background:var(--ink);color:#fff;font-weight:600}
 
 main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
@@ -395,6 +404,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
       <button data-go="vocab">成语速记</button>
       <button data-go="know">知识点</button>
       <button data-go="math">数量关系</button>
+      <button data-go="sci">科学推理</button>
       <button data-go="yanyu">言语理解</button>
       <button data-go="nanwang">南方电网</button>
     </nav>
@@ -404,7 +414,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   <section id="v-home">
     <div class="hero">
       <h1>今天该做的六件事</h1>
-      <p id="heroSub">刷题保持手感，言语理解每天一组，成语补底子，知识点背死该背的，数量关系练速度，南方电网单独背</p>
+      <p id="heroSub">刷题保持手感，言语理解每天一组，科学推理练定性判断，成语补底子，知识点背死该背的，数量关系练速度，南方电网单独背</p>
       <div class="row">
         <div><div class="k">刷题进度</div><div class="v" id="hDone">0<small> / 0</small></div></div>
         <div><div class="k">正确率</div><div class="v" id="hRate">—</div></div>
@@ -441,6 +451,12 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
         <div class="n" id="tMathDone">0<small> 道已做</small></div>
         <div class="bar"><i id="tMathBar" style="width:0%"></i></div>
         <div class="go">练一组 →</div>
+      </div>
+      <div class="tile" data-go="sci">
+        <div class="t">科学推理</div>
+        <div class="n" id="tSciDone">0<small> 道已做</small></div>
+        <div class="bar"><i id="tSciBar" style="width:0%"></i></div>
+        <div class="go">刷一组 →</div>
       </div>
       <div class="tile" data-go="yanyu">
         <div class="t">言语理解</div>
@@ -575,8 +591,8 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   <section id="v-math" style="display:none">
     <div id="mStart">
       <div class="mhero">
-        <div class="mt">数量关系 · 一组 10 道</div>
-        <div class="ms">13 个题型：工程、集合容斥、数字推理、和差倍比、行程、经济利润、排列组合与概率、几何、年龄、浓度、周期与日期、最值、牛吃草。<br>可以挑一个专项练，也可以混合抽题；选完立刻判对错、看解析，交卷出成绩；题库优先出你没做过的题。</div>
+        <div class="mt" id="mTitle">数量关系 · 一组 10 道</div>
+        <div class="ms" id="mDesc">13 个题型：工程、集合容斥、数字推理、和差倍比、行程、经济利润、排列组合与概率、几何、年龄、浓度、周期与日期、最值、牛吃草。<br>可以挑一个专项练，也可以混合抽题；选完立刻判对错、看解析，交卷出成绩；题库优先出你没做过的题。</div>
         <div class="mrow">
           <div><div class="k">题库</div><div class="v"><span id="mPool">0</span><small> 道</small></div></div>
           <div><div class="k">已做过</div><div class="v"><span id="mDoneN">0</span><small> 道</small></div></div>
@@ -863,6 +879,7 @@ const QUIZ = __QUIZ__;
 const VOCAB = __VOCAB__;
 const KNOW = __KNOW__;
 const MATH = __MATH__;
+const SCI = __SCI__;
 const YANYU = __YANYU__;
 const NANWANG = __NANWANG__;
 const CLOUD = __CLOUD__;
@@ -1153,14 +1170,17 @@ const state = { view:'home', pid:'', filter:'all', pos:0, list:[],
                 kmode:'card', kfilter:'all', kkw:'', kpos:0, klist:[], khide:false };
 
 const VIEWS = ['home','quiz','vocab','know','math','yanyu','nanwang'];
-const VIEWNAME = {home:'总览', quiz:'每日刷题', vocab:'成语速记', know:'知识点速记', math:'数量关系', yanyu:'言语理解', nanwang:'南方电网'};
+const VIEWNAME = {home:'总览', quiz:'每日刷题', vocab:'成语速记', know:'知识点速记', math:'数量关系', sci:'科学推理', yanyu:'言语理解', nanwang:'南方电网'};
 
 function go(view){
-  state.view = view;
+  const want = view;
+  // 科学推理和数量关系共用同一套答题界面（#v-math），只是数据源不同，所以这里先切模块再落到 math 视图。
+  if(view === 'sci' || view === 'math'){ setModule(view); view = 'math'; }
+  state.view = want;
   VIEWS.forEach(v => { $('#v-' + v).style.display = (v === view ? '' : 'none'); });
-  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.go === view));
-  $('#sub').textContent = VIEWNAME[view];
-  if(location.hash !== '#' + view) history.replaceState(null, '', '#' + view);
+  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('on', b.dataset.go === want));
+  $('#sub').textContent = VIEWNAME[want] || '';
+  if(location.hash !== '#' + want) history.replaceState(null, '', '#' + want);
   window.scrollTo({top:0});
   if(view === 'home') renderHome();
   if(view === 'quiz'){ buildDates(); buildTabs(); renderQuiz(); }
@@ -1669,17 +1689,37 @@ $('#kmCard').onclick = () => { state.kmode = 'card'; $('#kmCard').classList.add(
 $('#kmList').onclick = () => { state.kmode = 'list'; $('#kmList').classList.add('on'); $('#kmCard').classList.remove('on'); renderKnow(); };
 $('#kq').oninput = e => { state.kkw = e.target.value.trim(); state.kpos = 0; buildKnowList(); renderKnow(); };
 
-/* ================= 数量关系 ================= */
+/* ================= 数量关系 / 科学推理（共用一套答题引擎） ================= */
 const MSET_N = 10;
 let mset = null;              // {ids, pos, pick, t0, mode}
 let mView = 'start';          // start | run | done
 let mTimerId = 0;
-let mCat = 'all';             // 题型筛选：all / 工程问题 / 集合容斥
+let mCat = 'all';             // 题型筛选：all / 具体题型
 
-const MCATS = Array.from(new Set(MATH.map(x => x.cat || '工程问题')));
-const mBase = () => (mCat === 'all' ? MATH : MATH.filter(x => (x.cat || '工程问题') === mCat));
+// 两个模块的题目结构完全一样，做题记录也共用一份（id 前缀不冲突：m 开头是数量关系，s 开头是科学推理），
+// 所以这里只切换数据源，其余函数不动。
+let mKey = 'math';            // math | sci
+let mData = MATH;
+const MATH_DESC = '13 个题型：工程、集合容斥、数字推理、和差倍比、行程、经济利润、排列组合与概率、几何、年龄、浓度、周期与日期、最值、牛吃草。<br>可以挑一个专项练，也可以混合抽题；选完立刻判对错、看解析，交卷出成绩；题库优先出你没做过的题。';
+const SCI_DESC = '四科：物理（力学、电学、光声热）、化学、生物、地理，全是初中知识，重定性判断、轻套公式。<br>广东省考固定 5 道（物理 2—3 道、化学生物地理各 1 道），这里按 10 道的强度练，考场才够快。';
 
-const mById = id => MATH.find(x => x.id === id);
+const moduleCats = () => Array.from(new Set(mData.map(x => x.cat)));
+let MCATS = moduleCats();
+const mBase = () => (mCat === 'all' ? mData : mData.filter(x => x.cat === mCat));
+const mById = id => mData.find(x => x.id === id);
+
+function setModule(key){
+  mKey = key === 'sci' ? 'sci' : 'math';
+  mData = (mKey === 'sci') ? SCI : MATH;
+  MCATS = moduleCats();
+  mCat = 'all';
+  mset = null;
+  mView = 'start';
+  if($('#mTitle')){
+    $('#mTitle').textContent = (mKey === 'sci' ? '科学推理' : '数量关系') + ' · 一组 10 道';
+    $('#mDesc').innerHTML = mKey === 'sci' ? SCI_DESC : MATH_DESC;
+  }
+}
 
 function shuffle(a){
   const b = a.slice();
@@ -1706,8 +1746,8 @@ function buildMathChips(){
   const box = $('#mchips');
   if(!box) return;
   box.innerHTML = '';
-  const rows = [['all', '全部 ' + MATH.length]]
-    .concat(MCATS.map(c => [c, c + ' ' + MATH.filter(x => (x.cat || '工程问题') === c).length]));
+  const rows = [['all', '全部 ' + mData.length]]
+    .concat(MCATS.map(c => [c, c + ' ' + mData.filter(x => x.cat === c).length]));
   rows.forEach(([c, label]) => {
     const b = document.createElement('button');
     b.className = 'chip' + (mCat === c ? ' on' : '');
@@ -1857,7 +1897,9 @@ function finishM(){
   const rate = Math.round(right / total * 100);
   $('#mScoreS').textContent = rate >= 80 ? '稳了，这个正确率考场够用。'
     : rate >= 60 ? '基本盘在，错的那几道记一下是哪一步算错的。'
-    : '工程题先别求快，把「设总量＝最小公倍数」这一步固化下来。';
+    : (mKey === 'sci'
+        ? '科推题多半不是不会，是没看清「同体、等大、反向、共线」这类条件，回看时先找条件再找结论。'
+        : '工程题先别求快，把「设总量＝最小公倍数」这一步固化下来。');
   $('#mRight').textContent = right;
   $('#mWrong').textContent = total - right;
   $('#mUsed').textContent = Math.floor(used / 60) + '分' + (used % 60) + '秒';
@@ -1930,8 +1972,12 @@ $('#mquit').onclick = () => {
   stopTimer(); mset = null; mView = 'start'; renderMathView(); renderMathHome(); renderHome();
 };
 $('#mResetBtn').onclick = () => {
-  if(!confirm('清空数量关系的做题记录与收藏？（其他模块不受影响）')) return;
-  mstat = {}; mfavs = {}; mLast = null;
+  const name = mKey === 'sci' ? '科学推理' : '数量关系';
+  if(!confirm('清空' + name + '的做题记录与收藏？（其他模块不受影响）')) return;
+  const ids = new Set(mData.map(x => x.id));
+  Object.keys(mstat).forEach(k => { if(ids.has(k)) delete mstat[k]; });
+  Object.keys(mfavs).forEach(k => { if(ids.has(k)) delete mfavs[k]; });
+  mLast = null;
   try { localStorage.removeItem(MLKEY); } catch(e){}
   saveMath(); renderMathHome(); renderHome();
 };
@@ -2837,6 +2883,9 @@ function renderHome(){
   $('#tKnowBar').style.width = (kf / (KNOW.length || 1) * 100).toFixed(1) + '%';
   $('#tMathDone').innerHTML = mDone + '<small> 道已做</small>';
   $('#tMathBar').style.width = (mDone / (MATH.length || 1) * 100).toFixed(1) + '%';
+  const sDone = SCI.filter(x => mstat[x.id]).length;
+  if($('#tSciDone')) $('#tSciDone').innerHTML = sDone + '<small> 道已做</small>';
+  if($('#tSciBar')) $('#tSciBar').style.width = (sDone / (SCI.length || 1) * 100).toFixed(1) + '%';
   if($('#hYan')) $('#hYan').innerHTML = yf + '<small> 道</small>';
   if($('#hMath')) $('#hMath').innerHTML = mf + '<small> 道</small>';
   if($('#hNan')) $('#hNan').innerHTML = Object.keys(nfavs).length + '<small> 道</small>';
@@ -2984,6 +3033,7 @@ def main() -> None:
     vocab = load_vocab()
     know = load_know()
     math = load_math()
+    sci = load_sci()
     yanyu = load_yanyu()
     nanwang = load_nanwang()
     cloud = load_cloud()
@@ -2993,13 +3043,14 @@ def main() -> None:
     n_quiz = sum(len(p["questions"]) for p in quiz["papers"])
     n_kcat = len({k["cat"] for k in know})
     ver = (f"题库 {n_paper} 期 {n_quiz} 题 · 成语 {len(vocab)} 条 · 知识点 {len(know)} 张（{n_kcat} 类）"
-           f" · 数量关系 {len(math)} 道 · 言语理解 {len(yanyu)} 道 · 南方电网 {len(nanwang)} 道")
+           f" · 数量关系 {len(math)} 道 · 科学推理 {len(sci)} 道 · 言语理解 {len(yanyu)} 道 · 南方电网 {len(nanwang)} 道")
     html = (TEMPLATE
             .replace("__QUIZ__", json.dumps(quiz, ensure_ascii=False, separators=(",", ":")))
             .replace("__VER__", ver)
             .replace("__VOCAB__", json.dumps(vocab, ensure_ascii=False, separators=(",", ":")))
             .replace("__KNOW__", json.dumps(know, ensure_ascii=False, separators=(",", ":")))
             .replace("__MATH__", json.dumps(math, ensure_ascii=False, separators=(",", ":")))
+            .replace("__SCI__", json.dumps(sci, ensure_ascii=False, separators=(",", ":")))
             .replace("__YANYU__", json.dumps(yanyu, ensure_ascii=False, separators=(",", ":")))
             .replace("__NANWANG__", json.dumps(nanwang, ensure_ascii=False, separators=(",", ":")))
             .replace("__CLOUD_SDK__", load_cloud_sdk())
@@ -3023,7 +3074,7 @@ def main() -> None:
 
     total = sum(len(p["questions"]) for p in quiz["papers"])
     print(f"OK  {len(quiz['papers'])} 期 / {total} 题 + {len(vocab)} 条成语 + {len(know)} 条知识点 "
-          f"+ {len(math)} 道数量关系 + {len(yanyu)} 道言语理解 + {len(nanwang)} 道南方电网 -> {OUT}")
+          f"+ {len(math)} 道数量关系 + {len(sci)} 道科学推理 + {len(yanyu)} 道言语理解 + {len(nanwang)} 道南方电网 -> {OUT}")
 
 
 if __name__ == "__main__":
