@@ -858,7 +858,7 @@ main{max-width:820px;margin:0 auto;padding:18px 16px 90px}
   </div>
 </div>
 
-<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系按题型编排，覆盖工程、行程、利润、排列组合、几何等 13 类（广东省考固定考 5 道数字推理 + 10 道数学运算），言语理解收选词填空 23 道、片段阅读 21 道、语句表达 16 道，南方电网 2552 道取自《南网中公》资料、只在本模块使用（每题答案均由程序校验）<br><span id="buildVer" style="color:#b6bcc6">__VER__</span></p>
+<p class="foot">刷题题库按期编排，成语来自《高频800词记忆版》OCR 整理，知识点取自《时政考点库》《时政素材》与考纲常考条目，数量关系按题型编排，覆盖工程、行程、利润、排列组合、几何等 13 类（广东省考固定考 5 道数字推理 + 10 道数学运算），言语理解收选词填空 23 道、片段阅读 21 道、语句表达 16 道，南方电网 __NWCNT__ 道取自《南网中公》资料、只在本模块使用（每题答案均由程序校验）<br><span id="buildVer" style="color:#b6bcc6">__VER__</span></p>
 
 <div class="mask" id="cloudMask">
   <div class="sheet">
@@ -3047,6 +3047,7 @@ def main() -> None:
     html = (TEMPLATE
             .replace("__QUIZ__", json.dumps(quiz, ensure_ascii=False, separators=(",", ":")))
             .replace("__VER__", ver)
+            .replace("__NWCNT__", str(len(nanwang)))
             .replace("__VOCAB__", json.dumps(vocab, ensure_ascii=False, separators=(",", ":")))
             .replace("__KNOW__", json.dumps(know, ensure_ascii=False, separators=(",", ":")))
             .replace("__MATH__", json.dumps(math, ensure_ascii=False, separators=(",", ":")))
